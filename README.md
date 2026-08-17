@@ -83,7 +83,7 @@ flowchart TD
     E --> F[Relevant Context]
     F --> G[LLM Generation - In Progress]
     G --> H[Grounded Answer]
-    H --> I[Source Citations - document + page]
+    H --> I[Source Citations - document + page]        
 ```
 
 ---
