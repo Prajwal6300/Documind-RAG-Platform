@@ -84,73 +84,7 @@ DocuMind includes only verified, fully implemented capabilities:
 
 ## How It Works
 
-<<<<<<< HEAD
-### Document ingestion (implemented)
-
-```mermaid
-flowchart TD
-    A[User Uploads Documents] --> B[Streamlit UI]
-    B --> C[Document Loader]
-    C --> D[Text Extraction - PDF / DOCX / TXT]
-    D --> E[Chunking - fixed-size with overlap]
-    E --> F[Sentence Transformer Embeddings]
-    F --> G[ChromaDB Vector Store - persistent]
-```
-
-### Query flow (implemented retrieval; LLM generation in progress)
-
-```mermaid
-flowchart TD
-    A[User Question] --> B[Query Embedding]
-    B --> C[Vector Retrieval - ChromaDB]
-    C --> D[Top-K Candidates]
-    D --> E[Reranker - Planned]
-    E --> F[Relevant Context]
-    F --> G[LLM Generation - In Progress]
-    G --> H[Grounded Answer]
-    H --> I[Source Citations - document + page]        
-```
-
----
-
-## RAG Pipeline
-
-The complete intended pipeline:
-
-1. **Document upload** — user uploads PDF, DOCX, or TXT files.
-2. **Document parsing** — the file is parsed by type-specific loaders (`rag/document_loader.py`).
-3. **Text extraction** — PDF pages are extracted with PyMuPDF; DOCX paragraphs and TXT content are read directly.
-4. **Intelligent chunking** — text is split into overlapping chunks with source/page metadata (`rag/chunker.py`).
-5. **Metadata generation** — each chunk is tagged with its source file and page number.
-6. **Embedding generation** — chunks are embedded with `all-MiniLM-L6-v2` (`rag/embeddings.py`).
-7. **Vector storage** — embeddings are persisted in ChromaDB (`rag/vector_store.py`).
-8. **Query embedding** — the user's question is embedded with the same model.
-9. **Semantic retrieval** — the top-K most similar chunks are returned (`rag/retriever.py`).
-10. **Candidate reranking** — *planned*: a cross-encoder re-scores candidates before generation.
-11. **Context construction** — retrieved chunks are assembled with source labels (`rag/rag_pipeline.py`).
-12. **LLM generation** — *in progress*: context + question are sent to an LLM for a grounded answer.
-13. **Source citation** — the answer is shown alongside its document/page sources.
-
-**Why reranking is useful.** Vector search provides fast candidate retrieval by comparing embedding distances, but it can miss fine-grained relevance. A cross-encoder performs a more precise query–passage relevance scoring over the retrieved candidates, so only the most on-topic passages are passed to the LLM for generation.
-
----
-
-## Large Document Architecture
-
-The system is designed to handle large documents through:
-
-- **Batch processing** — *planned*: documents processed in batches rather than all at once.
-- **Page-wise extraction** — implemented for PDFs; each page becomes an indexable unit.
-- **Chunk-level indexing** — implemented; chunks are the retrieval unit stored in ChromaDB.
-- **Batched embeddings** — implemented (documents are embedded in batches at ingestion).
-- **Persistent vector storage** — implemented via ChromaDB `PersistentClient`.
-- **Metadata filtering** — *planned*: filtering retrieval by source/page metadata.
-- **Background / asynchronous ingestion** — *planned*: uploads processed without blocking the UI.
-
-### Intended large-document flow (planned design, not yet validated at scale)
-=======
 ### Document Ingestion Pipeline
->>>>>>> 711f58e (docs: update DocuMind README)
 
 ```text
 User Uploads Documents (PDF / DOCX / TXT / MD / CSV / XLSX / PPTX)
