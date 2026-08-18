@@ -1,65 +1,90 @@
-# DocuMind — Production RAG Document Intelligence Platform
+# DocuMind — AI Document Intelligence & RAG Assistant
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-Planned-009688?logo=fastapi&logoColor=white)
-![RAG](https://img.shields.io/badge/RAG-Retrieval%20Augmented%20Generation-4FC3F7?logo=openai&logoColor=white)
-![ChromaDB](https://img.shields.io/badge/ChromaDB-Vector%20Store-4183c4)
-![Docker](https://img.shields.io/badge/Docker-Planned-2496ED?logo=docker&logoColor=white)
-![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?logo=github&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.42+-FF4B4B?logo=streamlit&logoColor=white)
+![Google Gemini](https://img.shields.io/badge/LLM-Google%20Gemini%202.5%20Flash-4285F4?logo=google&logoColor=white)
+![ChromaDB](https://img.shields.io/badge/Vector%20Store-ChromaDB-4183C4)
+![Sentence Transformers](https://img.shields.io/badge/Embeddings-all--MiniLM--L6--v2-FFA116)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-DocuMind is being developed as a scalable **Retrieval-Augmented Generation (RAG)** platform for querying large collections of documents using semantic retrieval and LLM-based generation. Users upload documents and ask natural-language questions; the system retrieves the most relevant passages and produces grounded answers with source references.
-
-> **Status note:** DocuMind is under active development. Core retrieval components are implemented, while the LLM generation layer, evaluation suite, FastAPI API, and containerized deployment are planned. This README accurately reflects the current state of the repository and clearly distinguishes **Implemented**, **In Progress**, and **Planned** functionality.
+DocuMind is an enterprise-grade document question-answering application that allows users to upload multiple documents and ask natural-language questions across all indexed files. Built with a two-stage hybrid retrieval engine (dense semantic embeddings + sparse BM25 + exact entity matching) and powered by Google Gemini, DocuMind delivers accurate, evidence-grounded answers with document and page citations while actively preventing hallucinations through a pre-generation sufficiency gate.
 
 ---
 
-## Overview
+## Table of Contents
 
-**The problem.** Traditional document search requires users to manually open and scan large PDFs, DOCX, or text files to find the information they need. This is slow, error-prone, and does not scale to large or multi-document collections.
-
-**The solution.** DocuMind lets users upload documents and ask natural-language questions. The system:
-
-1. Extracts text from each document.
-2. Splits the text into searchable chunks.
-3. Embeds each chunk using a sentence transformer.
-4. Stores the embeddings in a ChromaDB vector database.
-5. Retrieves the most relevant chunks for a question using semantic similarity.
-6. Generates a grounded answer (LLM generation layer currently in development).
-
-**Large-document architecture (intended).** The platform is designed to scale to large documents through page-wise extraction, chunk-level indexing, batched embeddings, and persistent vector storage — so only relevant chunks, not entire documents, are sent to the LLM. Batch/asynchronous ingestion is planned and has **not** been implemented or tested at scale yet; no specific page limit is claimed.
+- [Key Features](#key-features)
+- [How It Works](#how-it-works)
+  - [Document Ingestion Pipeline](#document-ingestion-pipeline)
+  - [Query & RAG Generation Flow](#query--rag-generation-flow)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+  - [Prerequisites](#prerequisites)
+  - [Installation](#installation)
+  - [Environment Configuration](#environment-configuration)
+  - [Running the Application](#running-the-application)
+- [Configuration Reference](#configuration-reference)
+- [Testing & Evaluation](#testing--evaluation)
+- [Implemented vs. Future Roadmap](#implemented-vs-future-roadmap)
+- [Author & License](#author--license)
 
 ---
 
 ## Key Features
 
-| Feature | Status |
-| --- | --- |
-| Multi-document upload | Implemented |
-| PDF support | Implemented |
-| DOCX support | Implemented |
-| TXT support | Implemented |
-| Large-document ingestion | Planned |
-| Intelligent text chunking | Implemented (fixed-size with overlap; semantic chunking planned) |
-| Metadata extraction | In Progress (source + page metadata attached to chunks) |
-| Sentence Transformer embeddings | Implemented |
-| ChromaDB vector storage | Implemented (persistent) |
-| Semantic similarity search | Implemented |
-| Top-K retrieval | Implemented (default K = 5) |
-| Cross-encoder reranking | Planned |
-| Claude API integration | In Progress |
-| Ollama / local LLM support | Planned |
-| Grounded answer generation | In Progress |
-| Source / page citations | Implemented (retrieval metadata + UI display) |
-| Conversation history | Implemented (in-session chat history) |
-| FastAPI REST API | Planned |
-| RAG evaluation | Planned |
-| Docker deployment | Planned |
-| Production deployment | Planned |
+DocuMind includes only verified, fully implemented capabilities:
+
+- **Multi-Format Document Ingestion & Table Extraction**
+  - **PDF Documents** (`.pdf`): Extracts textual content and tabular layouts using PyMuPDF (`find_tables`).
+  - **Word Documents** (`.docx`): Extracts paragraph text and structured table data using `python-docx`.
+  - **Spreadsheets** (`.xlsx`, `.xls`): Extracts sheets, rows, and structured cell blocks using `openpyxl`.
+  - **Presentations** (`.pptx`, `.ppt`): Extracts slide content, shapes, text boxes, and slide tables using `python-pptx`.
+  - **Plain Text & Markdown** (`.txt`, `.md`, `.markdown`): Preserves raw formatting and headers.
+  - **Tabular CSV** (`.csv`): Converts rows into structured table text blocks.
+
+- **Intelligent Chunking & Section Awareness**
+  - Sentence-boundary splitting that preserves numeric figures, currencies, codes, and uppercase initials.
+  - Automatic detection of section headings (e.g., `EDUCATION`, `POLICIES`, `WORKING HOURS`) attached to chunk metadata.
+  - Deterministic SHA-256 chunk identifiers for robust deduplication and index tracking.
+
+- **Two-Stage Hybrid RAG Retrieval**
+  - **Stage 1 (Candidate Retrieval)**: Retrieves top candidates across documents combining dense semantic search (ChromaDB) and pure-Python Okapi BM25 lexical search.
+  - **Stage 2 (Hybrid Scoring & Diversity Selection)**: Scores chunks using a balanced formula:
+    $$\text{Score} = 0.50 \times \text{Semantic} + 0.30 \times \text{Lexical} + 0.20 \times \text{Exact Match} + 0.10 \times \text{Source Match}$$
+  - **Exact Identifier Boosting**: High-priority boost for exact codes (`EMP-1042`, `PO-2026-0042`), dates, monetary amounts, and multi-word phrase matches.
+  - **Document Diversity Balancing**: Ensures multi-document queries draw candidate evidence from across all indexed files.
+  - **Parent Context Expansion**: Automatically pulls adjacent neighbor chunks for top-ranked matches to maintain full context.
+
+- **Zero-LLM Question Analysis & Query Expansion**
+  - Fast, rule-based classification into query types: `FACT`, `LIST`, `EXPLANATION`, `COMPARISON`, `SUMMARY`, and `MULTI_PART`.
+  - Entity extraction for codes, IDs, dates, currency, percentages, emails, and phone numbers.
+  - Local query expansion and synonym mapping without consuming LLM API tokens.
+  - Follow-up question resolution incorporating recent chat history.
+
+- **Anti-Hallucination Evidence Sufficiency Gate**
+  - Rigorous distance and keyword threshold verification before invoking the LLM.
+  - If retrieved evidence is weak or irrelevant, DocuMind returns `"I couldn't find that information in the uploaded documents."` immediately without calling Gemini or inventing answers.
+
+- **Google Gemini Grounded Generation**
+  - Built with the official `google-genai` Python SDK, configured by default with `gemini-2.5-flash`.
+  - Strict 19-rule system prompt enforcing complete document grounding, exact value preservation, and factual conflict reporting.
+  - Real-time token streaming (`generate_answer_stream`) for low-latency responses.
+
+- **Warm Editorial Streamlit Interface**
+  - Multi-file drag-and-drop upload with status toasts and duplicate detection.
+  - Document management dashboard with page/chunk counts and single or bulk deletion.
+  - **Retrieval Scope Selector**: Toggle between searching across **All Documents** or scoping queries to a single active document.
+  - **Document Excerpt Previewer**: Inspect chunked text and page metadata directly from the sidebar.
+  - Chat interface with suggested prompt pills, message copying, and retry regeneration.
+  - Collapsible citation cards showing source document names, page numbers, and relevance metrics.
+  - **Developer Retrieval Diagnostics**: Toggleable inspection panel displaying question intent, candidate chunks, BM25 scores, and sufficiency gate decisions.
 
 ---
 
-## System Architecture
+## How It Works
 
+<<<<<<< HEAD
 ### Document ingestion (implemented)
 
 ```mermaid
@@ -123,326 +148,268 @@ The system is designed to handle large documents through:
 - **Background / asynchronous ingestion** — *planned*: uploads processed without blocking the UI.
 
 ### Intended large-document flow (planned design, not yet validated at scale)
+=======
+### Document Ingestion Pipeline
+>>>>>>> 711f58e (docs: update DocuMind README)
 
 ```text
-1000-page document
-        ↓  page-wise extraction
-page 1, page 2, ... page 1000
-        ↓  chunking
-thousands of chunks
-        ↓  batched embeddings
-embedding batches
-        ↓  persistent vector database (ChromaDB)
-stored vectors
-        ↓  semantic retrieval (top-K)
-top relevant chunks
-        ↓  reranking (planned)
-most relevant passages
-        ↓  LLM generation (in progress)
-grounded answer
+User Uploads Documents (PDF / DOCX / TXT / MD / CSV / XLSX / PPTX)
+                     ↓
+Format Extraction & Table Parsing (PyMuPDF, python-docx, openpyxl, python-pptx)
+                     ↓
+Text Cleaning & Sentence Boundary Splitting
+                     ↓
+Section Heading Tagging & Overlapping Chunking (CHUNK_SIZE=650, OVERLAP=100)
+                     ↓
+Dense Embeddings (sentence-transformers/all-MiniLM-L6-v2)
+                     ↓
+ChromaDB Persistent Vector Store & Metadata Registry (data/chroma)
 ```
 
-> The entire document is **never** sent to the LLM for every question. Only the top relevant chunks are retrieved and used as context, keeping generation fast and focused. No specific page limit is claimed, as large-document throughput has not yet been benchmarked.
+### Query & RAG Generation Flow
+
+```text
+User Question
+     ↓
+Question Analyzer (Local: Type Classification, Entities, Keywords, Synonyms, Follow-ups)
+     ↓
+Multi-Document Hybrid Retriever
+     ├── Dense Semantic Search (ChromaDB Vector Distance)
+     ├── Sparse Lexical Search (Okapi BM25 Indexing)
+     └── Exact Identifier / Phrase Match Booster
+     ↓
+Relevance Scoring & Multi-Document Diversity Selection
+     ↓
+Anti-Hallucination Evidence Sufficiency Gate
+     ├── [Insufficient Evidence] ──→ Return "I couldn't find that information..."
+     └── [Sufficient Evidence]   ──→ Context Expansion & Citation Context Builder
+                                         ↓
+                                 Google Gemini API (System Instruction + Streaming)
+                                         ↓
+                                 Grounded Streaming Answer + (Document, Page) Sources
+```
 
 ---
 
 ## Technology Stack
 
 | Layer | Technology | Purpose |
-| --- | --- | --- |
-| Frontend | Streamlit (`app.py`) | Upload UI, chat interface, source display |
-| Backend | Python | Core logic, document processing, RAG pipeline |
-| RAG — Embeddings | Sentence Transformers (`all-MiniLM-L6-v2`) | Semantic embedding of chunks and queries |
-| RAG — Vector Store | ChromaDB | Persistent vector storage and similarity search |
-| RAG — Reranking | Cross-encoder | *Planned* — precise query–passage re-scoring |
-| LLM | Claude API (Anthropic) / Ollama | *In Progress / Planned* — answer generation |
-| REST API | FastAPI | *Planned* — programmatic API access |
-| Containerization | Docker | *Planned* — reproducible deployment |
-| Testing | Pytest | *Planned* — automated tests not yet added |
-| Evaluation | RAG evaluation scripts | *Planned* — retrieval + generation metrics |
+|---|---|---|
+| **Frontend / UI** | Streamlit | Responsive conversational UI, file uploaders, citation cards, scope controls |
+| **Backend / Core** | Python (3.10+) | Application logic, orchestration, and text preprocessing |
+| **LLM Provider** | Google Gemini (`google-genai` SDK) | Grounded natural language generation and token streaming |
+| **Embeddings** | Sentence-Transformers (`all-MiniLM-L6-v2`) | Local 384-dimensional dense semantic vector embeddings |
+| **Vector Store** | ChromaDB (`PersistentClient`) | Persistent local vector database and metadata indexing |
+| **Lexical Engine** | Okapi BM25 & Exact Matcher (Pure Python) | In-memory keyword scoring, entity matching, and IDF calculation |
+| **Document Processing** | PyMuPDF (`pymupdf`), `python-docx`, `openpyxl`, `python-pptx` | Text, slide, sheet, and structural table extraction |
+| **Environment** | Python virtual environment (`venv`), `python-dotenv` | Isolated dependencies and environment configuration |
 
 ---
 
 ## Project Structure
 
-The current repository layout:
-
 ```text
-Documind-RAG-Platform/
-├── app.py                     # Streamlit UI — upload, chat, source citations
-├── rag/                       # RAG pipeline modules
-│   ├── __init__.py
-│   ├── document_loader.py     # PDF / DOCX / TXT text extraction
-│   ├── chunker.py             # Fixed-size chunking with overlap + metadata
-│   ├── embeddings.py          # Sentence Transformer embedding module
-│   ├── vector_store.py        # ChromaDB persistent vector store
-│   ├── retriever.py           # Semantic similarity retrieval (top-K)
-│   ├── llm.py                 # LLM module (in development)
-│   └── rag_pipeline.py        # Retrieve → context → generate orchestration
-├── utils/
-│   ├── __init__.py
-│   └── helpers.py             # Utility helpers (placeholder)
-├── data/
-│   ├── chroma/                # ChromaDB persistent storage (gitignored)
-│   └── uploads/               # Uploaded documents (gitignored)
-├── backend/                   # Backend scaffolding (Dockerfile placeholder)
-├── frontend/                  # Placeholder — the UI is Streamlit in app.py
-├── evaluation/                # Placeholder — RAG evaluation suite (planned)
-├── tests/                     # Placeholder — automated tests (planned)
-├── docs/                      # Placeholder — documentation (planned)
-├── docker-compose.yml         # Placeholder — empty, Docker not yet wired
-├── requirements.txt           # Python dependencies
+DocuMind/
+├── app.py                     # Streamlit web application & UI components
+├── requirements.txt           # Python package dependencies
+├── .env.example               # Template environment configuration file
 ├── .env                       # Local environment variables (gitignored)
-├── .gitignore
-└── README.md
+├── .gitignore                 # Git ignore rules
+├── README.md                  # Project documentation
+│
+├── rag/                       # Core RAG pipeline modules
+│   ├── __init__.py
+│   ├── config.py              # Central configuration & tunable thresholds
+│   ├── document_loader.py     # PDF, DOCX, TXT, CSV, XLSX, PPTX loaders with table extraction
+│   ├── chunker.py             # Sentence-aware chunker with section header tagging
+│   ├── embeddings.py          # Sentence-Transformers all-MiniLM-L6-v2 embedding model
+│   ├── vector_store.py        # ChromaDB persistent collection & document registry
+│   ├── lexical_search.py      # Okapi BM25 engine & exact entity/phrase matcher
+│   ├── question_analyzer.py   # Zero-LLM question classifier, entity extractor & synonym expander
+│   ├── retriever.py           # Two-stage hybrid retriever (semantic + BM25 + diversity)
+│   ├── llm.py                 # Google Gemini API integration (generation & streaming)
+│   └── rag_pipeline.py        # End-to-end RAG orchestrator & anti-hallucination gate
+│
+├── data/                      # Local data directory (auto-created, gitignored)
+│   └── chroma/                # ChromaDB persistent storage files
+│
+├── utils/                     # Shared utilities
+│   ├── __init__.py
+│   └── helpers.py
+│
+├── test_accuracy.py           # Automated accuracy & retrieval evaluation suite
+├── test_accuracy_comprehensive.py # Comprehensive multi-category test runner
+├── test_pipeline_retrieval.py # Retrieval pipeline verification script
+├── test_pipeline_full.py      # End-to-end pipeline test script
+├── test_multi.py              # Multi-document synthesis test script
+└── test_followup.py           # Follow-up query resolution test script
 ```
 
-### Planned architecture
-
-The following are scaffolded but **not yet implemented**:
-
-- `backend/` — an actual FastAPI backend with API endpoints.
-- `evaluation/` — RAG evaluation dataset and metric scripts.
-- `tests/` — automated unit/integration tests.
-- `docs/` — project documentation.
-- A real `Dockerfile` and `docker-compose.yml` for containerized deployment.
-
 ---
 
-## API Design
+## Getting Started
 
-No REST API endpoints exist yet. A FastAPI layer is **planned** with the following intended endpoints:
+### Prerequisites
 
-| Method | Endpoint | Status |
-| --- | --- | --- |
-| POST | `/api/documents/upload` | Planned |
-| GET | `/api/documents` | Planned |
-| DELETE | `/api/documents/{id}` | Planned |
-| POST | `/api/chat` | Planned |
-| POST | `/api/search` | Planned |
-| GET | `/api/health` | Planned |
+- **Python**: Version 3.10 or higher
+- **Gemini API Key**: Obtain a key from [Google AI Studio](https://aistudio.google.com/)
 
-Until then, the application is interacted with exclusively through the Streamlit UI.
+### Installation
 
----
+1. **Clone the repository:**
+   ```powershell
+   git clone https://github.com/Prajwal6300/Documind-RAG-Platform.git
+   cd Documind-RAG-Platform
+   ```
 
-## RAG Evaluation
+2. **Create and activate a virtual environment:**
 
-Evaluation is **planned** and will follow standard RAG evaluation methodology using a question/answer/source dataset that compares retrieval results and generated answers against expected outcomes.
+   *On Windows (PowerShell):*
+   ```powershell
+   python -m venv venv
+   .\venv\Scripts\Activate.ps1
+   ```
 
-**Retrieval metrics:**
-- **Recall@K** — fraction of relevant documents retrieved within the top-K results.
-- **Precision@K** — fraction of the top-K results that are relevant.
-- **MRR (Mean Reciprocal Rank)** — how early the first relevant result appears.
-- **Hit Rate** — whether at least one relevant result appears in the top-K.
+   *On macOS / Linux (Bash):*
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-**Generation metrics:**
-- **Faithfulness** — whether the answer is supported by the retrieved context.
-- **Answer Relevance** — how well the answer addresses the question.
-- **Context Relevance** — how relevant the retrieved context is to the question.
+3. **Install dependencies:**
+   ```powershell
+   pip install -r requirements.txt
+   ```
 
-No scores are reported yet, as the evaluation suite has not been built or run.
+### Environment Configuration
 
----
-
-## Installation
-
-Windows PowerShell instructions:
+Copy the example environment file and add your Gemini API key:
 
 ```powershell
-git clone https://github.com/Prajwal6300/Documind-RAG-Platform.git
-
-cd Documind-RAG-Platform
-
-python -m venv venv
-
-.\venv\Scripts\Activate.ps1
-
-pip install -r requirements.txt
+cp .env.example .env
 ```
 
-`requirements.txt` contains the actual project dependencies:
+Edit `.env` and set your key:
 
+```ini
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MAX_TOKENS=4096
+GEMINI_TEMPERATURE=0.1
+GEMINI_TIMEOUT=120
+LLM_PROVIDER=gemini
+
+TOP_K=5
+MAX_CONTEXT_TOKENS=4000
 ```
-streamlit
-anthropic
-chromadb
-sentence-transformers
-pymupdf
-python-docx
-python-dotenv
-numpy
-```
 
----
+> **Security Note:** Never commit your `.env` file or expose your actual API key. The `.env` file is excluded in `.gitignore`.
 
-## Environment Variables
+### Running the Application
 
-The project loads environment variables via `python-dotenv` and stores them in a local `.env` file (which is gitignored). The variables below are configured in the repository's `.env` and are intended for the planned Claude integration — they are not yet consumed by the code.
-
-| Variable | Description | Example |
-| --- | --- | --- |
-| `ANTHROPIC_API_KEY` | API key for the Claude (Anthropic) API | `ANTHROPIC_API_KEY=your_api_key_here` |
-| `CLAUDE_MODEL` | Claude model identifier used for generation | `CLAUDE_MODEL=your_claude_model_id` |
-
-> Never commit your real API keys. The `.env` file is excluded by `.gitignore`.
-
----
-
-## Running the Application
-
-The current entry point is the Streamlit app:
+Launch the Streamlit web interface:
 
 ```powershell
-.\venv\Scripts\Activate.ps1
-
 streamlit run app.py
 ```
 
-This launches the DocuMind UI where you can upload PDF, DOCX, and TXT documents, ask questions in natural language, and view retrieved source citations.
+The application will open in your default browser at `http://localhost:8501`.
 
-> **Development note:** The answer-generation module (`rag/llm.py`) is currently in development — the pipeline builds the retrieval context and returns sources, but the LLM `generate_answer` step has not been fully implemented yet.
-
-### Planned Production Run
-
-A production run is planned and will involve:
-
-- A FastAPI backend served behind a reverse proxy.
-- Containerized services via Docker Compose (API, vector store, frontend).
-- Persistent vector storage mounted outside the container.
-- Environment-based configuration of LLM providers.
-
-These components are **planned** and do not run today.
+1. Upload one or more documents (PDF, DOCX, TXT, CSV, XLSX, PPTX) via the sidebar.
+2. Select your retrieval scope (**All Documents** or a specific file).
+3. Enter questions in the chat box to receive grounded answers with source citations.
 
 ---
 
-## Docker
+## Configuration Reference
 
-Docker deployment is **planned**. The repository contains placeholder files (`backend/Dockerfile`, `docker-compose.yml`) that are currently empty and not yet functional. No Docker commands are documented yet.
+All RAG pipeline parameters are configurable via `.env` or `rag/config.py`:
 
----
-
-## Example Workflow
-
-1. **Upload `Employee_Handbook.pdf`** — done via the Streamlit sidebar.
-2. **System extracts text** — implemented (`rag/document_loader.py`).
-3. **Document is split into chunks** — implemented (`rag/chunker.py`).
-4. **Embeddings are generated** — implemented (`rag/embeddings.py`).
-5. **Chunks are stored in ChromaDB** — implemented (`rag/vector_store.py`).
-6. **User asks: "What is the annual leave policy?"** — implemented (chat input).
-7. **Vector retrieval finds relevant chunks** — implemented (`rag/retriever.py`).
-8. **Reranker selects the most relevant passages** — planned.
-9. **LLM generates an answer** — in progress.
-10. **UI displays answer with document/page source** — implemented (source expander).
-
-Steps 8–9 are marked as planned/in progress and are not yet fully functional.
-
----
-
-## Security Considerations
-
-- **Never commit `.env`** — the `.env` file is gitignored and holds API keys.
-- **Never expose API keys** — keep secrets in environment variables or a secret manager.
-- **Validate uploaded files** — verify file types before processing.
-- **Limit upload size** — enforce size limits to avoid resource exhaustion (planned).
-- **Sanitize filenames** — prevent path traversal and unsafe filenames (planned).
-- **Apply authentication before production deployment** — planned.
-- **Restrict API access** — planned for the FastAPI layer.
-- **Protect vector database storage** — keep the ChromaDB persistence directory secure and access-controlled.
+| Variable | Default | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | *(Required)* | Google Gemini API key |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Gemini model identifier for generation |
+| `GEMINI_MAX_TOKENS` | `4096` | Maximum generation token budget |
+| `GEMINI_TEMPERATURE` | `0.1` | Sampling temperature for strict factual consistency |
+| `GEMINI_TIMEOUT` | `120` | Request timeout in seconds |
+| `LLM_PROVIDER` | `gemini` | Configured LLM provider |
+| `TOP_K` | `5` | Target number of chunks to consider |
+| `MAX_CONTEXT_TOKENS` | `4000` | Token budget ceiling for LLM context injection |
+| `RETRIEVAL_CANDIDATES` | `14` | Stage-1 candidate pool size before ranking |
+| `FINAL_CONTEXT_CHUNKS` | `5` | Stage-2 final context chunks passed to Gemini |
+| `RELEVANCE_THRESHOLD` | `1.48` | ChromaDB squared L2 distance ceiling (cosine similarity $\ge 0.26$) |
+| `STRONG_RELEVANCE_THRESHOLD` | `1.20` | Distance below which evidence is considered strongly relevant |
+| `KEYWORD_RESOLVE_DISTANCE` | `1.62` | Borderline distance band eligible for keyword match rescue |
+| `KEYWORD_MATCH_REQUIRED` | `0.30` | Keyword match ratio required in the rescue band |
+| `SEMANTIC_WEIGHT` | `0.50` | Weight assigned to dense vector similarity |
+| `LEXICAL_WEIGHT` | `0.30` | Weight assigned to BM25 / keyword overlap score |
+| `EXACT_BOOST_WEIGHT` | `0.20` | Weight assigned to exact entity and code matches |
+| `SOURCE_WEIGHT` | `0.10` | Boost applied when query references the document filename |
+| `CHUNK_SIZE` | `650` | Target character length per text chunk |
+| `CHUNK_OVERLAP` | `100` | Overlap character count between consecutive chunks |
+| `ENABLE_CONTEXT_EXPANSION` | `True` | Whether to pull adjacent chunks for top hits |
+| `RAG_DEBUG` | `False` | Terminal debug logging for candidate rankings |
 
 ---
 
-## Scalability
+## Testing & Evaluation
 
-Planned scalability improvements (not yet implemented):
+The repository includes automated test suites to validate retrieval accuracy, entity extraction, multi-document synthesis, and anti-hallucination behavior:
 
-- Background document processing
-- Batch embedding
-- Persistent vector database (ChromaDB persistence is implemented; scale-up patterns planned)
-- Metadata filtering
-- Async FastAPI endpoints
-- Queue-based ingestion
-- Object storage for uploaded documents
-- PostgreSQL + pgvector as a future alternative for larger deployments
+```powershell
+# Run the core accuracy test suite
+python test_accuracy.py
 
----
+# Run comprehensive test coverage across document types
+python test_accuracy_comprehensive.py
 
-## Testing
+# Test multi-document retrieval and synthesis
+python test_multi.py
 
-Automated testing is part of the development roadmap. The `tests/` directory is currently empty and no test suite or test runner is configured yet.
+# Test follow-up question context resolution
+python test_followup.py
+```
 
----
-
-## Roadmap
-
-- [x] Document loading (PDF, DOCX, TXT)
-- [x] Text chunking with metadata
-- [x] Sentence Transformer embedding pipeline
-- [x] ChromaDB persistent vector storage
-- [x] Semantic similarity search with top-K retrieval
-- [x] Source/page citation metadata
-- [x] Streamlit UI with in-session conversation history
-- [ ] Multi-document ingestion
-- [ ] Large-document batch processing
-- [ ] Semantic chunking
-- [ ] Embedding pipeline optimizations (batched/async)
-- [ ] ChromaDB persistence hardening
-- [ ] Hybrid retrieval
-- [ ] Cross-encoder reranking
-- [ ] Claude integration
-- [ ] Ollama integration
-- [ ] Source citations (LLM-grounded)
-- [ ] FastAPI API layer
-- [ ] RAG evaluation
-- [ ] Automated tests
-- [ ] Docker
-- [ ] Authentication
-- [ ] Production deployment
-- [ ] Monitoring and logging
+The test framework evaluates:
+1. **Single-Document Precision**: Accurate extraction of specific dates, employee IDs, and leave rules.
+2. **Multi-Document Synthesis**: Cross-document comparisons and composite query answering.
+3. **Out-of-Scope Detection**: Confirmation that queries without evidence trigger safe refusal without hallucination.
+4. **Follow-Up Resolution**: Proper pronoun and reference expansion across conversation turns.
 
 ---
 
-## Resume Highlights
+## Implemented vs. Future Roadmap
 
-- **Retrieval-Augmented Generation** — end-to-end RAG pipeline design: ingestion, indexing, retrieval, and generation.
-- **Large-document processing** — architecture for scaling beyond single-document chat.
-- **Semantic search** — dense vector embeddings for meaning-based retrieval.
-- **Vector databases** — persistent storage and similarity search with ChromaDB.
-- **Reranking** — cross-encoder reranking designed to improve retrieval precision (planned).
-- **LLM integration** — provider-agnostic design for Claude and local Ollama models (in progress).
-- **REST API development** — planned FastAPI layer for programmatic access.
-- **RAG evaluation** — planned retrieval and generation metric framework.
-- **Docker** — planned containerized deployment.
-- **Production architecture** — focus on scalability, security, and maintainability.
+### Implemented Features (Current Release)
+- [x] Multi-document ingestion across 7 file formats (PDF, DOCX, TXT, MD, CSV, XLSX, PPTX)
+- [x] Structure-preserving table extraction for PDF, DOCX, CSV, Excel, and PowerPoint
+- [x] Sentence-aware chunking with section header tagging and overlap
+- [x] Sentence-Transformers dense embedding pipeline (`all-MiniLM-L6-v2`)
+- [x] Persistent ChromaDB vector storage and document registry
+- [x] Pure-Python Okapi BM25 lexical retrieval and exact entity matching
+- [x] Two-stage hybrid scoring with multi-document diversity balancing
+- [x] Anti-hallucination evidence sufficiency gate
+- [x] Google Gemini API integration with real-time token streaming
+- [x] Strict 19-rule document grounding system prompt
+- [x] Deduplicated source and page citations in UI
+- [x] Document scope selection (All Documents vs. Single Document)
+- [x] In-sidebar document excerpt previewer
+- [x] Developer diagnostics inspection panel
+- [x] Automated test suites for accuracy and retrieval evaluation
 
----
-
-## Future Improvements
-
-- Hybrid BM25 + vector search
-- Query rewriting
-- Multi-query retrieval
-- Parent-child chunking
-- OCR for scanned PDFs
-- Table-aware document parsing
-- Streaming responses
-- Authentication / RBAC
-- PostgreSQL + pgvector
-- Observability (metrics, logging, tracing)
-- Caching (query and embedding caching)
-- Cloud object storage
-- Distributed background workers
+### Planned Features (Future Roadmap)
+- [ ] **FastAPI REST API Layer**: Programmatic HTTP endpoints (`/api/documents`, `/api/chat`, `/api/search`)
+- [ ] **OCR Ingestion**: Tesseract / Vision-based extraction for scanned image PDFs
+- [ ] **Cross-Encoder Reranking**: Optional deep learning reranker for re-scoring candidates
+- [ ] **Docker Deployment**: Production-ready containerization with Docker Compose
+- [ ] **Authentication & Multi-Tenancy**: User accounts, role-based access control (RBAC), and tenant isolation
+- [ ] **Vector Database Scaling**: Managed pgvector (PostgreSQL) support for high-throughput enterprise deployments
 
 ---
 
-## License
+## Author & License
 
-MIT License (to be added when the repository license is finalized).
+**Author:** Prajwal Yadav  
+**GitHub:** [https://github.com/Prajwal6300](https://github.com/Prajwal6300)
 
----
-
-## Author
-
-**Prajwal Yadav**
-
-GitHub: [https://github.com/Prajwal6300](https://github.com/Prajwal6300)
+This project is licensed under the MIT License.
