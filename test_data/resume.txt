@@ -1,0 +1,18 @@
+Prajwal M. S. Yadav
+Software Engineer
+
+Skills:
+- Python
+- React
+- Node.js
+- SQL
+
+Experience:
+- Full Stack Developer at TechCorp (2020-2024)
+- AI/ML projects with Python
+
+Education:
+- B.Tech Computer Science
+
+Contact: +91-98765-43210
+Email: prajwal.yadav@example.com
