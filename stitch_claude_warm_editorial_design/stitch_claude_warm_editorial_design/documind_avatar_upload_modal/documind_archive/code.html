@@ -1,0 +1,282 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Archive - DocuMind</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "inverse-on-surface": "#f2f1ed",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#efeeea",
+                        "coral-accent": "#CC785C",
+                        "secondary-fixed-dim": "#c9c6c4",
+                        "on-tertiary": "#ffffff",
+                        "on-surface": "#1b1c1a",
+                        "on-primary-fixed-variant": "#75331c",
+                        "tertiary": "#5f5c53",
+                        "on-secondary-fixed": "#1c1c1a",
+                        "outline-variant": "#dac1ba",
+                        "on-secondary-container": "#636261",
+                        "on-tertiary-container": "#fffbff",
+                        "primary-container": "#ad5f45",
+                        "background": "#faf9f5",
+                        "on-secondary-fixed-variant": "#474745",
+                        "inverse-primary": "#ffb59d",
+                        "on-secondary": "#ffffff",
+                        "error": "#ba1a1a",
+                        "secondary-container": "#e2dfdd",
+                        "surface": "#faf9f5",
+                        "tertiary-container": "#78746b",
+                        "secondary-fixed": "#e5e2e0",
+                        "primary": "#8f482f",
+                        "on-primary-container": "#fffbff",
+                        "surface-tint": "#924a31",
+                        "secondary": "#5f5e5d",
+                        "tertiary-fixed-dim": "#cbc6bb",
+                        "canvas": "#FAF9F5",
+                        "body-text": "#3D3D3A",
+                        "outline": "#87736d",
+                        "muted-text": "#6C6A64",
+                        "primary-fixed": "#ffdbd0",
+                        "on-tertiary-fixed": "#1d1b15",
+                        "surface-dim": "#dbdad6",
+                        "surface-container-high": "#e9e8e4",
+                        "primary-fixed-dim": "#ffb59d",
+                        "inverse-surface": "#2f312e",
+                        "surface-container-highest": "#e3e2df",
+                        "on-background": "#1b1c1a",
+                        "card-surface": "#EFE9DE",
+                        "surface-bright": "#faf9f5",
+                        "tertiary-fixed": "#e8e2d7",
+                        "on-surface-variant": "#54433e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#390c00",
+                        "on-error": "#ffffff",
+                        "surface-variant": "#e3e2df",
+                        "on-tertiary-fixed-variant": "#49473f",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-container-low": "#f4f4f0"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        "content-max-width": "960px",
+                        "sidebar-width": "280px",
+                        "margin-desktop": "40px",
+                        "search-height": "70px",
+                        "margin-mobile": "20px",
+                        "gutter": "24px"
+                    },
+                    fontFamily: {
+                        "label-sm": ["Inter"],
+                        "display-lg": ["\"Source Serif 4\""],
+                        "headline-md": ["\"Source Serif 4\""],
+                        "headline-lg": ["\"Source Serif 4\""],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["\"Source Serif 4\""],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"]
+                    },
+                    fontSize: {
+                        "label-sm": ["12px", { lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "600" }],
+                        "display-lg": ["48px", { lineHeight: "56px", letterSpacing: "-0.03em", fontWeight: "400" }],
+                        "headline-md": ["24px", { lineHeight: "32px", letterSpacing: "-0.01em", fontWeight: "400" }],
+                        "headline-lg": ["32px", { lineHeight: "40px", letterSpacing: "-0.02em", fontWeight: "400" }],
+                        "body-md": ["16px", { lineHeight: "24px", fontWeight: "400" }],
+                        "headline-lg-mobile": ["28px", { lineHeight: "36px", letterSpacing: "-0.01em", fontWeight: "400" }],
+                        "body-lg": ["18px", { lineHeight: "28px", fontWeight: "400" }],
+                        "label-md": ["14px", { lineHeight: "20px", letterSpacing: "0.02em", fontWeight: "500" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .archive-item:hover .archive-actions { opacity: 1; pointer-events: auto; }
+        .archive-actions { opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+    </style>
+</head>
+<body class="bg-canvas text-body-text font-body-md text-body-md h-screen w-full flex overflow-hidden selection:bg-coral-accent selection:text-white">
+<!-- Sidebar Component (Constructed from JSON) -->
+<nav class="hidden md:flex flex-col bg-tertiary-fixed fixed left-0 top-0 h-full w-sidebar-width p-6 z-40 border-r border-outline-variant/20">
+<!-- Header -->
+<div class="mb-10 flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary text-on-primary flex items-center justify-center shrink-0"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuApExex_z_5b3BHktgdkNDAtxu4Ua6dMl-PsFIWnb-fX55qteIOaZJ73ftolEmTgGuvPTHnk0uaE9SnlkxCZYLUBztrdYqK7IhmDQY4a1AZwJAthnNHG-YTClml3Dtx76ukwkzEu9asetU-D7-u_NEI8PG_vbiu6JHGpNXd2Id8kwpjfHkjvVDUZcwi1kPRvTSZeyer0AQFkZDHpsqafCFkZZgliiokRjihU9bUt9Z3Bu5o3_2Act6o4aQSJM75TIOXS28" alt="DocuMind Logo" class="w-full h-full object-contain rounded-lg"></div>
+<div>
+<h1 class="text-headline-md font-headline-md font-bold text-on-tertiary-fixed">DocuMind</h1>
+<p class="text-label-sm font-label-sm text-muted-text mt-0.5">Premium Workspace</p>
+</div>
+</div>
+<!-- Main Tabs -->
+<div class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container-highest transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70 group-hover:opacity-100 transition-opacity">add_box</span>
+<span class="text-label-md font-label-md">New Chat</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container-highest transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70 group-hover:opacity-100 transition-opacity">history</span>
+<span class="text-label-md font-label-md">Recent Analysis</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container-highest transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70 group-hover:opacity-100 transition-opacity">description</span>
+<span class="text-label-md font-label-md">Library</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container-highest transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70 group-hover:opacity-100 transition-opacity">settings</span>
+<span class="text-label-md font-label-md">Workspace Settings</span>
+</a>
+</div>
+<!-- Footer Tabs -->
+<div class="mt-auto space-y-1 mb-6 border-t border-outline-variant/20 pt-4">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container-highest transition-colors group" href="#">
+<span class="material-symbols-outlined text-[20px] opacity-70 group-hover:opacity-100 transition-opacity">help</span>
+<span class="text-label-md font-label-md">Support</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-coral-accent font-bold bg-surface-container-highest/50 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] scale-98 transition-transform">archive</span>
+<span class="text-label-md font-label-md">Archive</span>
+</a>
+</div>
+<!-- CTA -->
+<button class="w-full bg-coral-accent text-white rounded-lg py-3 flex items-center justify-center gap-2 hover:bg-primary-container transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">upload_file</span>
+<span class="text-label-md font-label-md">Upload Documents</span>
+</button>
+</nav>
+<!-- Main Content Area -->
+<main class="md:ml-sidebar-width flex-1 h-full overflow-y-auto relative bg-canvas">
+<!-- Subtle background texture indication (pure css pattern) -->
+<div class="absolute inset-0 pointer-events-none opacity-[0.02]" style="background-image: radial-gradient(var(--tw-colors-on-surface) 1px, transparent 1px); background-size: 24px 24px;"></div>
+<div class="max-w-content-max-width mx-auto px-margin-mobile md:px-margin-desktop py-12 md:py-20 relative z-10">
+<!-- Header Section -->
+<header class="mb-16 border-b border-surface-variant pb-8"><a href="#" class="inline-flex items-center gap-2 text-label-md font-label-md text-muted-text hover:text-primary transition-colors mb-6 group">
+    <span class="material-symbols-outlined text-[20px] transition-transform group-hover:-translate-x-1">arrow_back</span>
+    <span class="">Back</span>
+</a>
+<h2 class="text-headline-lg-mobile md:text-headline-lg font-headline-lg-mobile md:font-headline-lg text-on-surface mb-3">Archive</h2>
+<p class="text-body-lg font-body-lg text-muted-text max-w-2xl">
+                    Resting documents and past analyses. Items here remain fully indexed for global searches but are removed from your primary workspace flow.
+                </p>
+</header>
+<!-- List Container (Ledger Style) -->
+<div class="bg-surface-bright rounded-xl border border-surface-variant/50 shadow-[0_4px_24px_rgba(0,0,0,0.02)] overflow-hidden">
+<!-- Table Header (Visual only, semantic list) -->
+<div class="flex items-center px-6 py-4 bg-surface-container-lowest border-b border-surface-variant/50 text-label-sm font-label-sm text-muted-text uppercase tracking-wider">
+<div class="w-12">Type</div>
+<div class="flex-1 pl-4">Title &amp; Context</div>
+<div class="w-32 text-right hidden sm:block">Date Archived</div>
+<div class="w-48 text-right pr-2">Actions</div>
+</div>
+<div class="divide-y divide-surface-variant/40">
+<!-- Item 1: Document -->
+<div class="archive-item flex items-center px-6 py-5 group transition-colors hover:bg-surface-container-lowest/50">
+<div class="w-12 flex justify-center text-muted-text/70">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1 pl-4 pr-6">
+<h3 class="text-body-lg font-headline-md font-medium text-on-surface/90 truncate">Q3 Financial Synthesis Report.pdf</h3>
+<p class="text-label-md font-label-md text-muted-text/80 mt-1 truncate">14 pages • Contains raw P&amp;L data and AI summaries.</p>
+</div>
+<div class="w-32 text-right text-label-md font-label-md text-muted-text hidden sm:block">
+                            Oct 12, 2023
+                        </div>
+<div class="w-48 flex justify-end items-center gap-4 archive-actions">
+<button class="text-label-md font-label-md text-coral-accent hover:text-primary transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">restore</span> Restore
+                            </button>
+<button class="text-label-md font-label-md text-error/70 hover:text-error transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">delete_forever</span>
+</button>
+</div>
+</div>
+<!-- Item 2: Chat Session -->
+<div class="archive-item flex items-center px-6 py-5 group transition-colors hover:bg-surface-container-lowest/50">
+<div class="w-12 flex justify-center text-muted-text/70">
+<span class="material-symbols-outlined">forum</span>
+</div>
+<div class="flex-1 pl-4 pr-6">
+<h3 class="text-body-lg font-headline-md font-medium text-on-surface/90 truncate">Project Alpha Architecture Ideation</h3>
+<p class="text-label-md font-label-md text-muted-text/80 mt-1 truncate">Chat Session • 24 interactions referencing 3 documents.</p>
+</div>
+<div class="w-32 text-right text-label-md font-label-md text-muted-text hidden sm:block">
+                            Sep 28, 2023
+                        </div>
+<div class="w-48 flex justify-end items-center gap-4 archive-actions">
+<button class="text-label-md font-label-md text-coral-accent hover:text-primary transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">restore</span> Restore
+                            </button>
+<button class="text-label-md font-label-md text-error/70 hover:text-error transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">delete_forever</span>
+</button>
+</div>
+</div>
+<!-- Item 3: Document -->
+<div class="archive-item flex items-center px-6 py-5 group transition-colors hover:bg-surface-container-lowest/50">
+<div class="w-12 flex justify-center text-muted-text/70">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1 pl-4 pr-6">
+<h3 class="text-body-lg font-headline-md font-medium text-on-surface/90 truncate">Draft - Employee Onboarding Handbook 2022.docx</h3>
+<p class="text-label-md font-label-md text-muted-text/80 mt-1 truncate">42 pages • Outdated version.</p>
+</div>
+<div class="w-32 text-right text-label-md font-label-md text-muted-text hidden sm:block">
+                            Aug 05, 2023
+                        </div>
+<div class="w-48 flex justify-end items-center gap-4 archive-actions">
+<button class="text-label-md font-label-md text-coral-accent hover:text-primary transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">restore</span> Restore
+                            </button>
+<button class="text-label-md font-label-md text-error/70 hover:text-error transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">delete_forever</span>
+</button>
+</div>
+</div>
+<!-- Item 4: Chat Session -->
+<div class="archive-item flex items-center px-6 py-5 group transition-colors hover:bg-surface-container-lowest/50">
+<div class="w-12 flex justify-center text-muted-text/70">
+<span class="material-symbols-outlined">forum</span>
+</div>
+<div class="flex-1 pl-4 pr-6">
+<h3 class="text-body-lg font-headline-md font-medium text-on-surface/90 truncate">Competitor Analysis Q2</h3>
+<p class="text-label-md font-label-md text-muted-text/80 mt-1 truncate">Chat Session • Brief extraction from competitor public filings.</p>
+</div>
+<div class="w-32 text-right text-label-md font-label-md text-muted-text hidden sm:block">
+                            Jul 14, 2023
+                        </div>
+<div class="w-48 flex justify-end items-center gap-4 archive-actions">
+<button class="text-label-md font-label-md text-coral-accent hover:text-primary transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">restore</span> Restore
+                            </button>
+<button class="text-label-md font-label-md text-error/70 hover:text-error transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">delete_forever</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty State / Footer hint (Optional, good for UX) -->
+<div class="mt-8 text-center">
+<p class="text-label-md font-label-md text-muted-text/60">Showing 4 of 4 archived items.</p>
+</div>
+</div>
+</main>
+
+
+
+
+</body></html>

@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: documind-backend
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: GEMINI_EMBEDDING_MODEL
+        value: gemini-embedding-001
+      - key: MAX_FILE_SIZE_MB
+        value: "25"
+      - key: EMBEDDING_PROVIDER
+        value: gemini
+      - key: ENABLE_RERANKER
+        value: "true"
+    disk:
+      name: documind-data
+      mountPath: /app/data
+      sizeGB: 5

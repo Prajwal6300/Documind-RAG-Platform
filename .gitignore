@@ -1,18 +1,56 @@
+# Python Virtual Environments
 venv/
+.venv/
+**/venv/
+**/.venv/
+env/
+**/env/
+
+# Python Bytecode & Cache
 __pycache__/
-*.pyc
-.env
-.env.*
-!.env.example
-
-data/uploads/
-data/chroma/
-data/processed/
-
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.so
 .pytest_cache/
 .coverage
+htmlcov/
 
+# Node / Frontend Dependencies & Builds
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+**/build/
+.npm
+*.tsbuildinfo
+
+# Environment & Secrets (Never commit .env, keep .env.example)
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Runtime Data, Database & Vector Storage
+data/
+**/data/
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+**/uploads/
+logs/
+**/logs/
+*.log
+
+# IDE & OS Artifacts
 .vscode/
 .idea/
-
-*.log
+*.swp
+*.swo
+.DS_Store
+Thumbs.db

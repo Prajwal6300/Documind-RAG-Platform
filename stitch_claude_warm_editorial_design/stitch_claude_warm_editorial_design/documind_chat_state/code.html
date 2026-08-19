@@ -1,0 +1,400 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>DocuMind - Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-surface": "#1b1c1a",
+                      "card-surface": "#EFE9DE",
+                      "inverse-on-surface": "#f2f1ed",
+                      "surface-container-low": "#f4f4f0",
+                      "background": "#faf9f5",
+                      "surface-bright": "#faf9f5",
+                      "inverse-primary": "#ffb59d",
+                      "secondary": "#5f5e5d",
+                      "outline": "#87736d",
+                      "secondary-fixed-dim": "#c9c6c4",
+                      "on-primary-container": "#fffbff",
+                      "on-error": "#ffffff",
+                      "secondary-fixed": "#e5e2e0",
+                      "error-container": "#ffdad6",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary": "#5f5c53",
+                      "on-tertiary-fixed": "#1d1b15",
+                      "error": "#ba1a1a",
+                      "surface-container-highest": "#e3e2df",
+                      "tertiary-fixed": "#e8e2d7",
+                      "muted-text": "#6C6A64",
+                      "surface-variant": "#e3e2df",
+                      "inverse-surface": "#2f312e",
+                      "surface-container": "#efeeea",
+                      "tertiary-container": "#78746b",
+                      "on-surface-variant": "#54433e",
+                      "on-background": "#1b1c1a",
+                      "on-primary": "#ffffff",
+                      "on-secondary-fixed": "#1c1c1a",
+                      "on-tertiary-container": "#fffbff",
+                      "coral-accent": "#CC785C",
+                      "on-error-container": "#93000a",
+                      "primary-fixed": "#ffdbd0",
+                      "on-tertiary": "#ffffff",
+                      "primary-container": "#ad5f45",
+                      "primary-fixed-dim": "#ffb59d",
+                      "surface-container-high": "#e9e8e4",
+                      "on-primary-fixed": "#390c00",
+                      "on-primary-fixed-variant": "#75331c",
+                      "surface-tint": "#924a31",
+                      "on-secondary-fixed-variant": "#474745",
+                      "surface": "#faf9f5",
+                      "on-secondary-container": "#636261",
+                      "surface-dim": "#dbdad6",
+                      "tertiary-fixed-dim": "#cbc6bb",
+                      "on-secondary": "#ffffff",
+                      "canvas": "#FAF9F5",
+                      "outline-variant": "#dac1ba",
+                      "on-tertiary-fixed-variant": "#49473f",
+                      "secondary-container": "#e2dfdd",
+                      "primary": "#8f482f",
+                      "body-text": "#3D3D3A",
+                      "evidence-bg": "#181715"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "margin-mobile": "20px",
+                      "search-height": "70px",
+                      "margin-desktop": "40px",
+                      "gutter": "24px",
+                      "content-max-width": "960px",
+                      "sidebar-width": "280px"
+              },
+              "fontFamily": {
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "headline-lg-mobile": [
+                              "\"Source Serif 4\""
+                      ],
+                      "label-sm": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "\"Source Serif 4\""
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-lg": [
+                              "\"Source Serif 4\""
+                      ]
+              },
+              "fontSize": {
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.03em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .sidebar-transition {
+            transition: transform 0.3s ease-in-out;
+        }
+        @media (max-width: 768px) {
+            .sidebar-hidden {
+                transform: translateX(-100%);
+            }
+        }
+      </style>
+</head>
+<body class="bg-canvas text-body-text font-body-md text-body-md h-screen overflow-hidden flex selection:bg-coral-accent selection:text-white">
+<!-- Mobile Top App Bar (Only visible md:hidden) -->
+<div class="md:hidden fixed top-0 w-full bg-background dark:bg-background flex justify-between items-center px-margin-mobile h-16 z-50">
+<button class="p-2 text-primary dark:text-inverse-primary hover:text-coral-accent transition-colors" id="mobile-menu-btn">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex items-center gap-2"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-POxbk5hTaEP5mavBYdOTcoWCHWIFYrz9IwTLl0uH_3iwQCV53MBrz7NY3afVwI-gEkPsKvzStslDPKH2yi1zBf3HKxmB4ZbeHS3Xiw2KEjWWjjoA5rfP-AWZCHhWKZUfvqMdg4X3V8Vu0HwQK7gMTd6zRJScvCR6BWu0j2eAPcEctafY8pK1s9z436cgiaT1AJqJDmYLIMABYb_MSxPKYklhJAreBr7iD56WGO-0991a0xwaldf8jQRTX3hko7wIdtk" alt="DocuMind Logo" class="h-8 w-8 object-contain"><span class="text-headline-md font-headline-md font-bold text-on-surface dark:text-inverse-on-surface">DocuMind</span></div>
+<button class="p-2 text-primary dark:text-inverse-primary hover:text-coral-accent transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+<!-- SideNavBar -->
+<nav class="fixed md:relative left-0 top-0 h-full w-sidebar-width flex flex-col p-6 z-40 bg-tertiary-fixed dark:bg-tertiary-container sidebar-transition sidebar-hidden md:transform-none" id="sidebar">
+<!-- Close button for mobile -->
+<button class="md:hidden absolute top-4 right-4 p-2 text-on-tertiary-fixed hover:text-coral-accent transition-colors" id="close-sidebar-btn">
+<span class="material-symbols-outlined">close</span>
+</button>
+<div class="mb-10 mt-12 md:mt-0">
+<div class="flex items-center gap-2 mb-1"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAFqRZj6DECPhYiHkZa4Cl8PKYDLa8vTv-r9v_19NO7HRSd9a5GAIeTe2qzC4q2vBwwSeX4kick_-fqlr79144e8jt49vJXS5o2LzoZQLlDTvof8We4dHFxqbbSLgub7IkddGOWOH9jElJQGHvkt_9PGYJrkjEbDSXszv7y_v4HlIhB5f_QYcPHGKdcllyhTw82FExvx5mlDxJtg0BGXUAHUk1kZHPwtGbvabkpZ2unkGGedvnjT4WVYVK59YiYZU9wGZw" alt="DocuMind Logo" class="h-8 w-8 object-contain"><h1 class="text-headline-md font-headline-md text-on-tertiary-fixed">DocuMind</h1></div>
+<p class="text-label-sm font-label-sm text-on-tertiary-fixed opacity-70">Premium Workspace</p>
+</div>
+<button class="w-full bg-coral-accent text-white py-3 px-4 rounded-lg flex items-center justify-center gap-2 mb-8 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined">upload</span>
+<span class="text-label-md font-label-md">Upload Documents</span>
+</button>
+<ul class="flex-1 space-y-2 overflow-y-auto">
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-coral-accent font-bold scale-98 transition-transform bg-surface-container-highest dark:bg-surface-variant" href="#">
+<span class="material-symbols-outlined">add_box</span>
+<span class="text-label-md font-label-md">New Chat</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant dark:text-on-tertiary-container hover:bg-surface-container-highest dark:hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-label-md font-label-md">Recent Analysis</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant dark:text-on-tertiary-container hover:bg-surface-container-highest dark:hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined">description</span>
+<span class="text-label-md font-label-md">Library</span>
+</a>
+</li>
+<li class="">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant dark:text-on-tertiary-container hover:bg-surface-container-highest dark:hover:bg-surface-variant transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-label-md font-label-md">Workspace Settings</span>
+</a>
+</li>
+</ul>
+<div class="mt-auto pt-6 border-t border-muted-text/10 space-y-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="text-label-md font-label-md">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-tertiary-fixed-variant hover:bg-surface-container-highest transition-colors" href="#">
+<span class="material-symbols-outlined">archive</span>
+<span class="text-label-md font-label-md">Archive</span>
+</a>
+<div class="flex items-center gap-3 px-3 py-2 mt-4">
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center overflow-hidden border border-muted-text/20">
+<span class="material-symbols-outlined text-secondary">person</span>
+</div>
+<span class="text-label-sm font-label-sm text-on-tertiary-fixed opacity-70 truncate" title="DocuMind Intelligence">DocuMind Intelligence</span>
+</div>
+</div>
+</nav>
+<!-- Overlay for mobile sidebar -->
+<div class="fixed inset-0 bg-on-surface/50 z-30 hidden md:hidden" id="sidebar-overlay"></div>
+<!-- Main Workspace -->
+<main class="flex-1 flex flex-col relative mt-16 md:mt-0 max-h-screen">
+<!-- Desktop Top Nav Cluster (Only visible md:flex) -->
+<div class="hidden md:flex items-center w-full px-margin-desktop h-16 bg-background dark:bg-background z-10 absolute top-0 justify-between"><button class="flex items-center gap-2 text-primary hover:text-coral-accent transition-colors group">
+    <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+    <span class="text-label-md font-label-md">Back</span>
+</button>
+<div class="flex items-center gap-6">
+<span class="text-body-md font-body-md text-on-surface-variant flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    Gemini · Ready
+                </span>
+<span class="text-body-md font-body-md text-on-surface-variant">12 Files Indexed</span>
+<button class="text-primary hover:text-coral-accent transition-colors">
+<span class="material-symbols-outlined">account_circle</span>
+</button>
+</div>
+</div>
+<!-- Chat Feed Area -->
+<div class="flex-1 overflow-y-auto w-full flex justify-center pb-32 pt-8 md:pt-24 px-margin-mobile md:px-margin-desktop scroll-smooth">
+<div class="w-full max-w-content-max-width space-y-12">
+<!-- User Message -->
+<div class="flex justify-end">
+<p class="text-body-lg font-body-lg text-on-surface max-w-2xl bg-surface-container-low px-6 py-4 rounded-xl rounded-tr-sm border border-muted-text/10">
+                        What are the main projects Prajwal worked on?
+                    </p>
+</div>
+<!-- Assistant Response -->
+<div class="space-y-6">
+<div class="prose prose-lg max-w-none text-body-lg font-body-lg text-body-text leading-relaxed">
+<p class="mb-4">Based on the provided documents, Prajwal Yadav has been involved in several key initiatives, primarily focusing on frontend development, AI integration, and UI/UX improvements.</p>
+<h3 class="text-headline-md font-headline-md text-on-surface mt-8 mb-4">Key Projects</h3>
+<ul class="space-y-4 list-disc pl-5 marker:text-muted-text">
+<li class="">
+<strong>AI Content Generation Platform Redesign:</strong> Led the frontend overhaul of the core AI writing tool, improving response rendering times by 30% and implementing a new real-time streaming UI pattern.
+                                <div class="mt-2">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container-highest text-label-sm font-label-sm text-secondary cursor-pointer hover:bg-coral-accent hover:text-white transition-colors">
+                                        [ PDF · Page 4 ]
+                                    </span>
+</div>
+</li>
+<li class="">
+<strong>Design System Architecture:</strong> Initiated and maintained the 'Technological Humanism' component library, ensuring consistency across three different product lines and establishing strict typographical hierarchy rules.
+                                <div class="mt-2">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container-highest text-label-sm font-label-sm text-secondary cursor-pointer hover:bg-coral-accent hover:text-white transition-colors">
+                                        [ PDF · Page 2 ]
+                                    </span>
+</div>
+</li>
+<li class="">
+<strong>Document Analytics Dashboard:</strong> Developed a complex data visualization dashboard using advanced charting libraries to display document engagement metrics.
+                            </li>
+</ul>
+</div>
+<!-- Sources Section -->
+<div class="pt-6 border-t border-muted-text/15">
+<h4 class="text-label-md font-label-md text-muted-text mb-3 uppercase tracking-wider">Sources</h4>
+<div class="flex flex-wrap gap-2">
+<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-muted-text/20 text-body-md font-body-md text-secondary hover:border-coral-accent transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm">description</span>
+                                Prajwal_Yadav.pdf · Page 4
+                            </span>
+<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-muted-text/20 text-body-md font-body-md text-secondary hover:border-coral-accent transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-sm">description</span>
+                                Projects.pdf · Page 2
+                            </span>
+</div>
+</div>
+<!-- Evidence Toggle / View -->
+<div class="pt-2">
+<button class="flex items-center gap-1 text-coral-accent text-label-md font-label-md hover:opacity-80 transition-opacity mb-3" id="toggle-evidence">
+<span class="material-symbols-outlined text-sm transition-transform duration-200" id="evidence-icon">arrow_drop_down</span>
+                            View evidence
+                        </button>
+<div class="bg-[#181715] rounded-xl p-6 shadow-sm border border-outline/20" id="evidence-container">
+<div class="flex items-center gap-4 mb-4 text-label-sm font-label-sm text-[#EFE9DE] opacity-70">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">folder</span>
+                                    DOCUMENT: Prajwal_Yadav.pdf
+                                </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">find_in_page</span>
+                                    PAGE: 4
+                                </span>
+</div>
+<div class="text-body-md font-body-md text-canvas font-mono leading-relaxed pl-4 border-l-2 border-coral-accent">
+                                "...during Q3, Prajwal took ownership of the AI Content Generation Platform redesign. The objective was twofold: modernize the visual aesthetic using the new design system guidelines, and drastically improve performance. By optimizing state management and implementing a sophisticated real-time streaming UI pattern for incoming AI tokens, perceived response rendering times were reduced by approximately 30%..."
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Fixed Search Bar Area -->
+<div class="absolute bottom-0 w-full bg-gradient-to-t from-canvas via-canvas to-transparent pb-8 pt-12 px-margin-mobile md:px-margin-desktop flex justify-center z-20">
+<div class="w-full max-w-content-max-width relative shadow-[0_8px_30px_rgb(0,0,0,0.08)] rounded-2xl group">
+<input class="w-full h-[70px] bg-canvas border border-muted-text/20 rounded-2xl pl-6 pr-16 text-body-lg font-body-lg text-on-surface placeholder:text-muted-text focus:outline-none focus:border-coral-accent focus:ring-1 focus:ring-coral-accent transition-all" placeholder="Ask a follow-up question..." type="text">
+<button class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-coral-accent text-white hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+</main>
+<script>
+        // Mobile Sidebar Toggle Logic
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('sidebar-hidden');
+            sidebarOverlay.classList.toggle('hidden');
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleSidebar);
+        closeSidebarBtn.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // Evidence Toggle Logic
+        const toggleEvidenceBtn = document.getElementById('toggle-evidence');
+        const evidenceContainer = document.getElementById('evidence-container');
+        const evidenceIcon = document.getElementById('evidence-icon');
+        let evidenceVisible = true;
+
+        toggleEvidenceBtn.addEventListener('click', () => {
+            evidenceVisible = !evidenceVisible;
+            if (evidenceVisible) {
+                evidenceContainer.style.display = 'block';
+                evidenceIcon.textContent = 'arrow_drop_down';
+            } else {
+                evidenceContainer.style.display = 'none';
+                evidenceIcon.textContent = 'arrow_right';
+            }
+        });
+    </script>
+
+
+
+
+</body></html>
