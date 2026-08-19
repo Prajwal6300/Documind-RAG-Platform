@@ -1,0 +1,282 @@
+[
+  {
+    "id": "eval-1",
+    "question": "How many days of casual leave is an employee entitled to per year?",
+    "type": "factual",
+    "expected_source": "company_policy.pdf",
+    "expected_keywords": ["12 days", "casual leave"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-2",
+    "question": "What is the sick leave allowance per year?",
+    "type": "factual",
+    "expected_source": "company_policy.pdf",
+    "expected_keywords": ["10 days", "sick leave"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-3",
+    "question": "When can an employee earn annual leave and how many days?",
+    "type": "factual",
+    "expected_source": "company_policy.pdf",
+    "expected_keywords": ["20 days", "one year"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-4",
+    "question": "What are the standard working hours and lunch break timing?",
+    "type": "factual",
+    "expected_source": "company_policy.pdf",
+    "expected_keywords": ["9 AM", "6 PM", "1 PM", "2 PM"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-5",
+    "question": "What is the health insurance coverage limit for employee EMP1024?",
+    "type": "factual",
+    "expected_source": "company_policy.pdf",
+    "expected_keywords": ["$50,000", "EMP1024"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-6",
+    "question": "What is the joining date and monthly salary of employee EMP1024?",
+    "type": "factual",
+    "expected_source": "company_policy.pdf",
+    "expected_keywords": ["15 March 2021", "$4,500"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-7",
+    "question": "What is the price and stock quantity of Hex Bolt M12 in the inventory?",
+    "type": "factual",
+    "expected_source": "inventory.docx",
+    "expected_keywords": ["$1.50", "5000", "Hex Bolt"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-8",
+    "question": "How much does a Steel Washer cost and how many are in stock?",
+    "type": "factual",
+    "expected_source": "inventory.docx",
+    "expected_keywords": ["$0.20", "10000", "Steel Washer"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-9",
+    "question": "What is the price of an Aluminium Bracket?",
+    "type": "factual",
+    "expected_source": "inventory.docx",
+    "expected_keywords": ["$8.75", "Aluminium Bracket"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-10",
+    "question": "What technical skills are listed on Prajwal Yadav's resume?",
+    "type": "factual",
+    "expected_source": "resume.txt",
+    "expected_keywords": ["Python", "React", "Node.js", "SQL"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-11",
+    "question": "Where did Prajwal work and during what years?",
+    "type": "factual",
+    "expected_source": "resume.txt",
+    "expected_keywords": ["TechCorp", "2020", "2024"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-12",
+    "question": "What is Prajwal Yadav's email and phone number?",
+    "type": "factual",
+    "expected_source": "resume.txt",
+    "expected_keywords": ["prajwal.yadav@example.com", "+91-98765-43210"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-13",
+    "question": "What educational degree does Prajwal hold?",
+    "type": "factual",
+    "expected_source": "resume.txt",
+    "expected_keywords": ["B.Tech", "Computer Science"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-14",
+    "question": "Who provides workplace safety guidelines according to the handbook?",
+    "type": "factual",
+    "expected_source": "employee_handbook.pdf",
+    "expected_keywords": ["safety department"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-15",
+    "question": "What communication channels should be used for work according to the handbook?",
+    "type": "factual",
+    "expected_source": "employee_handbook.pdf",
+    "expected_keywords": ["official communication channels"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-16",
+    "question": "Summarize all products and their quantities in the inventory.",
+    "type": "summary",
+    "expected_source": "inventory.docx",
+    "expected_keywords": ["Hex Bolt", "Steel Washer", "Aluminium Bracket"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-17",
+    "question": "Summarize the complete leave entitlement structure for employees.",
+    "type": "summary",
+    "expected_source": "company_policy.pdf",
+    "expected_keywords": ["casual", "sick", "annual"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-18",
+    "question": "List Prajwal's skills and his developer work experience at TechCorp.",
+    "type": "multi_doc",
+    "expected_source": "resume.txt",
+    "expected_keywords": ["Python", "TechCorp"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-19",
+    "question": "What is the maternity or parental leave policy for employees?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-20",
+    "question": "What is the return and refund policy for damaged inventory items?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-21",
+    "question": "What is Prajwal Yadav's GPA or grade in his B.Tech degree?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-22",
+    "question": "What is the minimum pension contribution percentage in the policy?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-23",
+    "question": "What is the warranty period for the Aluminium Bracket?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-24",
+    "question": "What is the capital of France and who is the current president?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-25",
+    "question": "How many remote work days or work-from-home days are allowed per week?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-26",
+    "question": "What is the stock level for Brass Screws in the product inventory?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-27",
+    "question": "What is the dress code specified in the employee handbook?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-28",
+    "question": "What is the bonus multiplier for Q4 performance?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-29",
+    "question": "Does Prajwal know Golang or Rust programming languages?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-30",
+    "question": "What is the severance package formula in the company policy?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-31",
+    "question": "What is the total quantity of all fasteners and brackets combined?",
+    "type": "factual",
+    "expected_source": "inventory.docx",
+    "expected_keywords": ["5000", "10000", "2000"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-32",
+    "question": "What is the exact working hours schedule from Monday to Friday?",
+    "type": "factual",
+    "expected_source": "company_policy.pdf",
+    "expected_keywords": ["9 AM to 6 PM"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-33",
+    "question": "Does TechCorp experience include AI/ML projects with Python?",
+    "type": "factual",
+    "expected_source": "resume.txt",
+    "expected_keywords": ["AI/ML", "Python"],
+    "should_refuse": false
+  },
+  {
+    "id": "eval-34",
+    "question": "What is the emergency evacuation route in the office building?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "eval-35",
+    "question": "What is the annual gym membership reimbursement in the policy?",
+    "type": "unanswerable",
+    "expected_source": null,
+    "expected_keywords": [],
+    "should_refuse": true
+  }
+]
