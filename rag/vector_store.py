@@ -1,24 +1,17 @@
 import hashlib
 import time
-
+from pathlib import Path
 import chromadb
 
 from rag.embeddings import embed_documents
 
-
 CHROMA_PATH = "data/chroma"
+Path(CHROMA_PATH).mkdir(parents=True, exist_ok=True)
 
-client = chromadb.PersistentClient(
-    path=CHROMA_PATH
-)
+client = chromadb.PersistentClient(path=CHROMA_PATH)
 
-collection = client.get_or_create_collection(
-    name="rag_documents"
-)
-
-registry = client.get_or_create_collection(
-    name="documents_registry"
-)
+collection = client.get_or_create_collection(name="rag_documents")
+registry = client.get_or_create_collection(name="documents_registry")
 
 
 def _chunk_id(document_id, source, page, chunk_index):
@@ -26,20 +19,18 @@ def _chunk_id(document_id, source, page, chunk_index):
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 
+def get_collection():
+    global collection
+    return collection
+
+
 def add_chunks(chunks):
+    global collection
     if not chunks:
         return
 
-    documents = [
-        chunk["text"]
-        for chunk in chunks
-    ]
-
-    metadatas = [
-        chunk["metadata"]
-        for chunk in chunks
-    ]
-
+    documents = [chunk["text"] for chunk in chunks]
+    metadatas = [chunk["metadata"] for chunk in chunks]
     ids = [
         _chunk_id(
             chunk.get("metadata", {}).get("document_id"),
@@ -52,16 +43,29 @@ def add_chunks(chunks):
 
     embeddings = embed_documents(documents)
 
-    collection.upsert(
-        ids=ids,
-        documents=documents,
-        embeddings=embeddings,
-        metadatas=metadatas
-    )
-
-
-def get_collection():
-    return collection
+    try:
+        collection.upsert(
+            ids=ids,
+            documents=documents,
+            embeddings=embeddings,
+            metadatas=metadatas
+        )
+    except Exception as exc:
+        if "dimension" in str(exc).lower():
+            print(f"[DocuMind VectorStore] Embedding dimension changed ({exc}), recreating Chroma collection.")
+            try:
+                client.delete_collection(name="rag_documents")
+            except Exception:
+                pass
+            collection = client.get_or_create_collection(name="rag_documents")
+            collection.upsert(
+                ids=ids,
+                documents=documents,
+                embeddings=embeddings,
+                metadatas=metadatas
+            )
+        else:
+            raise exc
 
 
 def get_document(doc_id):
@@ -141,6 +145,7 @@ def list_documents():
 
 
 def _remove_document_by_id(doc_id):
+    global collection
     try:
         collection.delete(where={"document_id": doc_id})
     except Exception:
@@ -157,6 +162,7 @@ def remove_document(doc_id):
 
 
 def clear_all_documents():
+    global collection
     try:
         ids = collection.get().get("ids", [])
         if ids:
@@ -174,6 +180,7 @@ def clear_all_documents():
 
 def get_document_chunks(document_id, include_embeddings=False):
     """Return all stored chunks (text + metadata) for a given document."""
+    global collection
     try:
         result = collection.get(
             where={"document_id": document_id},
@@ -200,6 +207,7 @@ def get_document_chunks(document_id, include_embeddings=False):
 
 def get_all_chunks():
     """Return all stored chunks across all documents."""
+    global collection
     try:
         result = collection.get(
             include=["documents", "metadatas"],
