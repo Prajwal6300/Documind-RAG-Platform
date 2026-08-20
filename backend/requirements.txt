@@ -1,0 +1,3 @@
+# Primary source of truth: ../requirements.txt
+# This file directs pip to the root requirements.txt to ensure single-source dependency management.
+-r ../requirements.txt

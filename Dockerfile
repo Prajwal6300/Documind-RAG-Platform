@@ -14,12 +14,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application source code
-COPY rag/ ./rag/
+COPY migrations/ ./migrations/
 COPY backend/ ./backend/
 COPY test_data/ ./test_data/
 
 # Create persistent storage directory
-RUN mkdir -p data/uploads data/chroma data/logs
+RUN mkdir -p data/uploads data/logs
 
 ENV PYTHONUNBUFFERED=1
 ENV PORT=8000

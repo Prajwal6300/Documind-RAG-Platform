@@ -1,0 +1,75 @@
+# ==============================================================================
+# DocuMind Enterprise RAG Configuration (config.yaml)
+# ==============================================================================
+# This configuration file serves as the centralized source of truth for all
+# hyperparameters, model selections, storage paths, retrieval weights, and
+# observability settings across the DocuMind RAG platform.
+#
+# Sections:
+#   - llm: Controls the generation LLM provider, model version, temperature,
+#          max tokens, and API call timeout.
+#   - storage: Defines persistent file storage directories (uploads, Supabase
+#              Postgres connection, logs), file size limits, and allowed extensions.
+#   - chunking: Configures recursive document chunk size and token overlap.
+#   - retrieval: Tunable parameters for the multi-stage hybrid retriever
+#                (semantic vs lexical weights, candidate pool sizes, relevance thresholds).
+#   - reranker: Controls the local neural Cross-Encoder model and activation.
+#   - observability: Pipeline debug logging and telemetry trace flags.
+#
+# Note: Sensitive credentials such as GEMINI_API_KEY must be stored in `.env`
+# and will seamlessly override or populate runtime configuration.
+# ==============================================================================
+
+llm:
+  provider: "gemini"
+  model: "gemini-flash-latest"
+  embedding_model: "gemini-embedding-001"
+  max_tokens: 4096
+  temperature: 0.1
+  timeout: 120
+
+storage:
+  upload_dir: "data/uploads"
+  database_url: "${DATABASE_URL}"
+  log_path: "data/logs/documind.log"
+  max_file_size_mb: 25
+  allowed_extensions:
+    - "pdf"
+    - "docx"
+    - "txt"
+    - "csv"
+    - "xlsx"
+    - "xls"
+    - "pptx"
+    - "ppt"
+    - "md"
+    - "markdown"
+
+chunking:
+  chunk_size: 650
+  chunk_overlap: 100
+
+retrieval:
+  top_k: 5
+  candidates_k: 14
+  final_context_chunks: 6
+  max_context_tokens: 4000
+  relevance_threshold: 1.48
+  strong_relevance_threshold: 1.20
+  keyword_resolve_distance: 1.62
+  keyword_match_required: 0.30
+  max_summary_chunks: 10
+  enable_context_expansion: true
+  max_expansion_chunks: 2
+  weights:
+    semantic: 0.50
+    lexical: 0.30
+    exact_boost: 0.20
+    source: 0.10
+
+reranker:
+  enabled: true
+  model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+observability:
+  debug_mode: false

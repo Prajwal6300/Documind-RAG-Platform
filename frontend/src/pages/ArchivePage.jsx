@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 
 export default function ArchivePage() {
   const navigate = useNavigate();
-  const { archivedItems, restoreArchivedItem, deleteArchivedItem } = useApp();
+  const { archivedItems, isLoadingArchive, restoreArchivedItem, deleteArchivedItem, serverError, retryConnection } = useApp();
 
   return (
     <div className="flex-1 px-margin-mobile md:px-margin-desktop py-10 max-w-content-max-width mx-auto w-full flex flex-col min-h-[calc(100vh-4rem)]">
@@ -27,25 +27,43 @@ export default function ArchivePage() {
         </p>
       </header>
 
-      {/* Ledger Container */}
-      <div className="bg-surface-bright rounded-2xl border border-surface-variant/70 shadow-xs overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center px-6 py-4 bg-surface-container-lowest border-b border-surface-variant/50 text-label-sm font-label-sm text-muted-text uppercase tracking-wider text-xs">
-          <div className="w-12 text-center">Type</div>
-          <div className="flex-1 pl-4">Title & Context</div>
-          <div className="w-32 text-right hidden sm:block">Date Archived</div>
-          <div className="w-44 text-right pr-2">Actions</div>
-        </div>
+{/* Ledger Container */}
+        <div className="bg-surface-bright rounded-2xl border border-surface-variant/70 shadow-xs overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center px-6 py-4 bg-surface-container-lowest border-b border-surface-variant/50 text-label-sm font-label-sm text-muted-text uppercase tracking-wider text-xs">
+            <div className="w-12 text-center">Type</div>
+            <div className="flex-1 pl-4">Title & Context</div>
+            <div className="w-32 text-right hidden sm:block">Date Archived</div>
+            <div className="w-44 text-right pr-2">Actions</div>
+          </div>
 
-        {/* List of Archived Items */}
-        <div className="divide-y divide-surface-variant/40">
-          {archivedItems.length === 0 ? (
-            <div className="p-16 text-center text-muted-text">
-              <span className="material-symbols-outlined text-[44px] opacity-30 mb-2">archive</span>
-              <p className="font-headline-md text-lg text-on-surface">Archive is empty</p>
-              <p className="text-sm mt-1">Archived documents and conversations will appear here.</p>
-            </div>
-          ) : (
+          {/* List of Archived Items */}
+          <div className="divide-y divide-surface-variant/40">
+            {isLoadingArchive ? (
+              <div className="p-16 text-center text-muted-text">
+                <span className="material-symbols-outlined text-[36px] animate-spin inline-block mb-2 opacity-40">progress_activity</span>
+                <p className="text-sm">Loading archived items...</p>
+              </div>
+            ) : serverError ? (
+              <div className="p-16 text-center text-muted-text">
+                <span className="material-symbols-outlined text-[44px] opacity-30 mb-2">cloud_off</span>
+                <p className="font-headline-md text-lg text-on-surface">Cannot load the archive</p>
+                <p className="text-sm mt-1">{serverError}</p>
+                <button
+                  onClick={retryConnection}
+                  className="mt-4 text-xs font-semibold text-coral-accent hover:text-primary transition-colors inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[14px]">refresh</span>
+                  Retry connection
+                </button>
+              </div>
+            ) : archivedItems.length === 0 ? (
+              <div className="p-16 text-center text-muted-text">
+                <span className="material-symbols-outlined text-[44px] opacity-30 mb-2">archive</span>
+                <p className="font-headline-md text-lg text-on-surface">Archive is empty</p>
+                <p className="text-sm mt-1">Archived documents and conversations will appear here.</p>
+              </div>
+            ) : (
             archivedItems.map((item) => (
               <div
                 key={item.id}

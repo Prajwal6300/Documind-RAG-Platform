@@ -22,9 +22,13 @@ export default function UploadDocumentModal() {
     if (!file) return;
     const name = file.name;
     const ext = name.split('.').pop()?.toLowerCase();
-    const allowed = ['pdf', 'docx', 'xlsx', 'txt', 'csv', 'pptx', 'md'];
+    const allowed = ['pdf', 'docx', 'xlsx', 'txt', 'csv', 'pptx', 'md', 'xls', 'ppt', 'markdown'];
     if (!allowed.includes(ext)) {
-      addToast(`Unsupported file format .${ext}. Please select a PDF, DOCX, XLSX, TXT, CSV, or PPTX file.`, 'error');
+      addToast(`Unsupported file format .${ext}. Please select a PDF, DOCX, XLSX, TXT, CSV, PPTX, or Markdown file.`, 'error');
+      return;
+    }
+    if (file.size === 0) {
+      addToast('The selected file is empty. Please choose a non-empty file.', 'error');
       return;
     }
     if (file.size > 25 * 1024 * 1024) {
@@ -121,7 +125,7 @@ export default function UploadDocumentModal() {
               ref={fileInputRef}
               type="file"
               onChange={(e) => handleFile(e.target.files?.[0])}
-              accept=".pdf,.docx,.xlsx,.txt,.csv,.pptx,.md"
+              accept=".pdf,.docx,.xlsx,.txt,.csv,.pptx,.md,.xls,.ppt,.markdown"
               className="hidden"
             />
             <span

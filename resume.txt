@@ -1,4 +1,0 @@
-Prajwal M. S. Yadav
-Software Engineer
-Skills: Python, React, Node.js, SQL
-Education: B.Tech Computer Science

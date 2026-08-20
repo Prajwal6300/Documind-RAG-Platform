@@ -12,10 +12,16 @@ export function AppProvider({ children }) {
   const [suggestedQuestions, setSuggestedQuestions] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [selectedScope, setSelectedScope] = useState('All Documents');
-  
+
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [isLoadingDocs, setIsLoadingDocs] = useState(true);
-  
+  const [isLoadingArchive, setIsLoadingArchive] = useState(true);
+  const [isLoadingRecent, setIsLoadingRecent] = useState(true);
+
+  // True when the backend is unreachable so pages can show a clear
+  // "can't connect to server" state instead of a silent failure.
+  const [serverError, setServerError] = useState(null);
+
   // User Profile & Settings State
   const [userSettings, setUserSettings] = useState({
     name: "Enterprise Scholar",
@@ -52,51 +58,75 @@ export function AppProvider({ children }) {
     }, 4000);
   }, []);
 
-  const removeToast = (id) => {
+  const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  };
+  }, []);
 
   // -------------------------------------------------------------------------
   // Fetch Real Data from Backend
   // -------------------------------------------------------------------------
 
   const fetchDocuments = useCallback(async () => {
+    setIsLoadingDocs(true);
     try {
       const data = await api.getDocuments();
       setDocuments(data);
-      setIsLoadingDocs(false);
+      setServerError(null);
     } catch (err) {
-      console.error('Failed to fetch documents:', err);
+      setServerError(err.message);
+      addToast(`Couldn't load documents: ${err.message}`, 'error');
+    } finally {
       setIsLoadingDocs(false);
     }
-  }, []);
+  }, [addToast]);
 
   const fetchRecentAnalyses = useCallback(async () => {
+    setIsLoadingRecent(true);
     try {
       const data = await api.getChatSessions();
       setRecentAnalyses(data);
+      setServerError(null);
     } catch (err) {
-      console.error('Failed to fetch recent analyses:', err);
+      setServerError(err.message);
+      addToast(`Couldn't load chat history: ${err.message}`, 'error');
+    } finally {
+      setIsLoadingRecent(false);
     }
-  }, []);
+  }, [addToast]);
 
   const fetchArchive = useCallback(async () => {
+    setIsLoadingArchive(true);
     try {
       const data = await api.getArchive();
       setArchivedItems(data);
+      setServerError(null);
     } catch (err) {
-      console.error('Failed to fetch archive:', err);
+      setServerError(err.message);
+      addToast(`Couldn't load archive: ${err.message}`, 'error');
+    } finally {
+      setIsLoadingArchive(false);
     }
-  }, []);
+  }, [addToast]);
 
   const fetchSuggestedQuestions = useCallback(async () => {
     try {
       const data = await api.getSuggestedQuestions();
       setSuggestedQuestions(data);
     } catch (err) {
-      console.error('Failed to fetch suggested questions:', err);
+      addToast(`Couldn't load suggested questions: ${err.message}`, 'error');
     }
-  }, []);
+  }, [addToast]);
+
+  const retryConnection = useCallback(() => {
+    setServerError(null);
+    setIsLoadingDocs(true);
+    setIsLoadingArchive(true);
+    setIsLoadingRecent(true);
+    fetchDocuments();
+    fetchRecentAnalyses();
+    fetchArchive();
+    fetchSuggestedQuestions();
+  }, [fetchDocuments, fetchRecentAnalyses, fetchArchive, fetchSuggestedQuestions]);
 
   // Initial load
   useEffect(() => {
@@ -115,13 +145,14 @@ export function AppProvider({ children }) {
       try {
         const updated = await api.getDocuments();
         setDocuments(updated);
+        setServerError(null);
         const stillProcessing = updated.some((d) => d.status === 'Processing');
         if (!stillProcessing) {
           fetchSuggestedQuestions();
           addToast('Document indexing completed!', 'success');
         }
       } catch (err) {
-        console.error('Error polling documents:', err);
+        addToast(`Couldn't refresh documents: ${err.message}`, 'error');
       }
     }, 2000);
 
@@ -135,6 +166,11 @@ export function AppProvider({ children }) {
   const uploadDocument = async (file, title = '') => {
     if (!file) {
       addToast('No file selected.', 'error');
+      return;
+    }
+
+    if (file.size === 0) {
+      addToast('The selected file is empty. Please choose a non-empty file.', 'error');
       return;
     }
 
@@ -213,6 +249,7 @@ export function AppProvider({ children }) {
   const sendChatMessage = async (text, scope = null) => {
     const queryText = text.trim();
     if (!queryText) return;
+    if (isAiThinking) return; // Guard against rapid double-submits
 
     const activeScope = scope || selectedScope;
 
@@ -228,7 +265,7 @@ export function AppProvider({ children }) {
 
     try {
       const response = await api.sendChatMessage(queryText, activeScope, currentSessionId);
-      
+
       if (response.sessionId) {
         setCurrentSessionId(response.sessionId);
       }
@@ -247,12 +284,11 @@ export function AppProvider({ children }) {
       setChatMessages((prev) => [...prev, assistantMsg]);
       fetchRecentAnalyses();
     } catch (err) {
-      console.error('Chat error:', err);
       const errorMsg = {
         id: `msg-${Date.now()}`,
         sender: 'assistant',
-        intro: `Error: ${err.message || 'Unable to connect to RAG backend.'}`,
-        text: `Error: ${err.message || 'Unable to connect to RAG backend.'}`,
+        intro: err.message || 'Unable to connect to RAG backend.',
+        text: err.message || 'Unable to connect to RAG backend.',
         sections: [],
         sources: [],
         evidences: [],
@@ -329,6 +365,8 @@ export function AppProvider({ children }) {
         selectedScope,
         setSelectedScope,
         isAiThinking,
+        serverError,
+        retryConnection,
         userSettings,
         isAvatarModalOpen,
         setIsAvatarModalOpen,

@@ -5,7 +5,7 @@ import { api } from '../api/client';
 
 export default function LibraryPage() {
   const navigate = useNavigate();
-  const { documents, deleteDocument, setIsUploadModalOpen, addToast } = useApp();
+  const { documents, isLoadingDocs, deleteDocument, setIsUploadModalOpen, addToast, serverError, retryConnection } = useApp();
 
   const [selectedType, setSelectedType] = useState('All Types');
   const [sortBy, setSortBy] = useState('date'); // 'date' | 'name' | 'pages'
@@ -191,7 +191,25 @@ export default function LibraryPage() {
 
         {/* Table Body */}
         <div className="divide-y divide-muted-text/10">
-          {filteredAndSortedDocs.length === 0 ? (
+          {isLoadingDocs ? (
+            <div className="py-16 text-center text-muted-text">
+              <span className="material-symbols-outlined text-[36px] animate-spin inline-block mb-2 opacity-40">progress_activity</span>
+              <p className="text-sm">Loading documents...</p>
+            </div>
+          ) : serverError ? (
+            <div className="py-16 text-center text-muted-text">
+              <span className="material-symbols-outlined text-[40px] opacity-40 mb-2">cloud_off</span>
+              <p className="font-headline-md text-lg text-on-surface">Cannot load your library</p>
+              <p className="text-sm mt-1">{serverError}</p>
+              <button
+                onClick={retryConnection}
+                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-coral-accent text-white text-xs font-label-md hover:bg-primary transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">refresh</span>
+                Retry connection
+              </button>
+            </div>
+          ) : filteredAndSortedDocs.length === 0 ? (
             <div className="py-16 text-center text-muted-text">
               <span className="material-symbols-outlined text-[40px] opacity-40 mb-2">folder_off</span>
               <p className="font-headline-md text-lg text-on-surface">No documents found</p>

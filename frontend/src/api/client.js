@@ -1,29 +1,88 @@
 /**
  * DocuMind API Client
  * Connects frontend to the FastAPI RAG backend.
+ *
+ * Every call handles: network failure (backend unreachable), timeouts, and
+ * HTTP 4xx/5xx — each surfaced as a specific, user-readable Error message.
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 
-async function handleResponse(response) {
+// Timeouts (ms). Chat can legitimately take a while (retrieval + generation).
+const REQUEST_TIMEOUT = 15000;
+const CHAT_TIMEOUT = 120000;
+const UPLOAD_TIMEOUT = 300000;
+
+export class ApiError extends Error {
+  constructor(message, { status = null, code = null } = {}) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.code = code;
+  }
+}
+
+/**
+ * Fetch with an AbortController timeout. Never hangs indefinitely.
+ */
+async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new ApiError('The request timed out. The server may be busy — please try again.', { code: 'timeout' });
+    }
+    // Network failure: backend down, proxy error, CORS rejection, DNS failure.
+    throw new ApiError(
+      "Can't connect to the DocuMind server. Check that the backend is running, then try again.",
+      { code: 'network_error' }
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function handleResponse(response, timeoutMs = REQUEST_TIMEOUT) {
   if (!response.ok) {
     let errorDetail = 'Request failed';
+    let serverCode = null;
     try {
       const errJson = await response.json();
       errorDetail = errJson.detail || errJson.message || errorDetail;
+      serverCode = errJson.code || null;
     } catch {
       errorDetail = response.statusText || errorDetail;
     }
-    throw new Error(errorDetail);
+
+    let message = errorDetail;
+    if (response.status === 429) {
+      message = errorDetail || 'Too many requests. Please wait a moment and try again.';
+    } else if (response.status === 503) {
+      message = 'The server is temporarily unavailable. Please try again in a moment.';
+    } else if (response.status === 502 || response.status === 504) {
+      message = 'The server took too long to respond. Please try again.';
+    } else if (response.status >= 500) {
+      message = errorDetail === 'Request failed'
+        ? 'Something went wrong on the server. Please try again.'
+        : errorDetail;
+    }
+
+    throw new ApiError(message, { status: response.status, code: serverCode });
   }
   return response.json();
+}
+
+function checkStatus(res, timeoutMs) {
+  return handleResponse(res, timeoutMs);
 }
 
 export const api = {
   // Document endpoints
   async getDocuments(includeArchived = false) {
-    const res = await fetch(`${API_BASE_URL}/api/documents?include_archived=${includeArchived}`);
-    return handleResponse(res);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/documents?include_archived=${includeArchived}`);
+    return checkStatus(res);
   },
 
   async uploadDocument(file, title = '') {
@@ -33,32 +92,32 @@ export const api = {
       formData.append('title', title);
     }
 
-    const res = await fetch(`${API_BASE_URL}/api/documents/upload`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/documents/upload`, {
       method: 'POST',
       body: formData,
-    });
-    return handleResponse(res);
+    }, UPLOAD_TIMEOUT);
+    return checkStatus(res, UPLOAD_TIMEOUT);
   },
 
   async deleteDocument(docId, permanent = false) {
-    const res = await fetch(`${API_BASE_URL}/api/documents/${docId}?permanent=${permanent}`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/documents/${docId}?permanent=${permanent}`, {
       method: 'DELETE',
     });
-    return handleResponse(res);
+    return checkStatus(res);
   },
 
   async archiveDocument(docId) {
-    const res = await fetch(`${API_BASE_URL}/api/documents/${docId}/archive`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/documents/${docId}/archive`, {
       method: 'POST',
     });
-    return handleResponse(res);
+    return checkStatus(res);
   },
 
   async restoreDocument(docId) {
-    const res = await fetch(`${API_BASE_URL}/api/documents/${docId}/restore`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/documents/${docId}/restore`, {
       method: 'POST',
     });
-    return handleResponse(res);
+    return checkStatus(res);
   },
 
   getDownloadUrl(docId) {
@@ -67,13 +126,13 @@ export const api = {
 
   // Archive endpoint
   async getArchive() {
-    const res = await fetch(`${API_BASE_URL}/api/archive`);
-    return handleResponse(res);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/archive`);
+    return checkStatus(res);
   },
 
   // Chat endpoints
   async sendChatMessage(message, scope = 'All Documents', sessionId = null) {
-    const res = await fetch(`${API_BASE_URL}/api/chat`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -81,36 +140,41 @@ export const api = {
         scope,
         session_id: sessionId,
       }),
-    });
-    return handleResponse(res);
+    }, CHAT_TIMEOUT);
+    return checkStatus(res, CHAT_TIMEOUT);
   },
 
   async getChatSessions() {
-    const res = await fetch(`${API_BASE_URL}/api/chat/sessions`);
-    return handleResponse(res);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/chat/sessions`);
+    return checkStatus(res);
   },
 
   async getChatHistory(sessionId) {
-    const res = await fetch(`${API_BASE_URL}/api/chat/${sessionId}`);
-    return handleResponse(res);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/chat/${sessionId}`);
+    return checkStatus(res);
   },
 
   async deleteChatSession(sessionId, permanent = false) {
-    const res = await fetch(`${API_BASE_URL}/api/chat/sessions/${sessionId}?permanent=${permanent}`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/chat/sessions/${sessionId}?permanent=${permanent}`, {
       method: 'DELETE',
     });
-    return handleResponse(res);
+    return checkStatus(res);
   },
 
   // Suggested questions
   async getSuggestedQuestions() {
-    const res = await fetch(`${API_BASE_URL}/api/suggested-questions`);
-    return handleResponse(res);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/suggested-questions`);
+    return checkStatus(res);
   },
 
   // System Health
   async getHealth() {
-    const res = await fetch(`${API_BASE_URL}/api/health`);
-    return handleResponse(res);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/health`, {}, 5000);
+    return checkStatus(res);
+  },
+
+  async getLogs(lines = 40) {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/logs?lines=${lines}`);
+    return checkStatus(res);
   },
 };

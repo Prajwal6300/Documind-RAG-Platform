@@ -14,21 +14,25 @@ import json
 import time
 from pathlib import Path
 
-# Add project root to sys.path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from rag.document_loader import load_document
-from rag.chunker import create_chunks
-from rag.vector_store import add_chunks, clear_all_documents, get_collection
-from rag.rag_pipeline import answer_question, NO_CONTEXT_MESSAGE
-import backend.database as db
+from backend.src.ingestion import load_document
+from backend.src.chunking import create_chunks
+from backend.src.vectordb import add_chunks, clear_all_documents, get_collection
+from backend.src.vectordb import database as db
+from backend.src.pipeline import answer_question
+from backend.src.prompts import NO_CONTEXT_MESSAGE
 
-DATASET_PATH = Path("scripts/eval_dataset.json")
-TEST_DATA_DIR = Path("test_data")
-OUTPUT_REPORT = Path("evaluation/eval_report.json")
+DATASET_PATH = ROOT_DIR / "scripts" / "eval_dataset.json"
+TEST_DATA_DIR = ROOT_DIR / "test_data"
+OUTPUT_REPORT = ROOT_DIR / "evaluation" / "eval_report.json"
 OUTPUT_REPORT.parent.mkdir(parents=True, exist_ok=True)
 
 
@@ -65,7 +69,7 @@ def index_test_documents():
             indexed += 1
             print(f"  [OK] Indexed '{file_path.name}' ({len(pages)} pages, {len(chunks)} chunks)")
 
-    print(f"[EVAL SETUP] Successfully indexed {indexed} documents ({get_collection().count()} total chunks in Chroma).\n")
+    print(f"[EVAL SETUP] Successfully indexed {indexed} documents ({get_collection().count()} total chunks in Supabase pgvector).\n")
 
 
 def run_evaluation():
@@ -99,7 +103,7 @@ def run_evaluation():
 
         answer_text = res.get("intro", "") + " " + res.get("answer", "")
         no_context = res.get("no_context", False)
-        sources_cited = [s.get("name") for s in res.get("sources", [])]
+        sources_cited = [s.get("name") or s.get("source") for s in res.get("sources", [])]
         groundedness_score = (res.get("groundedness") or {}).get("score", 0.0)
 
         # Check refusal accuracy

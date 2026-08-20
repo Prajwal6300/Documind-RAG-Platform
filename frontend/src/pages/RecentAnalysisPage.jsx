@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 
 export default function RecentAnalysisPage() {
   const navigate = useNavigate();
-  const { recentAnalyses, loadChatSession, addToast } = useApp();
+  const { recentAnalyses, isLoadingRecent, loadChatSession, addToast, serverError, retryConnection } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredAnalyses = useMemo(() => {
@@ -71,7 +71,25 @@ export default function RecentAnalysisPage() {
 
       {/* Analysis List */}
       <div className="space-y-4">
-        {filteredAnalyses.length === 0 ? (
+        {isLoadingRecent ? (
+          <div className="p-12 text-center text-muted-text bg-card-surface/40 rounded-2xl border border-outline-variant/20">
+            <span className="material-symbols-outlined text-[36px] animate-spin inline-block mb-2 opacity-40">progress_activity</span>
+            <p className="text-sm">Loading past analyses...</p>
+          </div>
+        ) : serverError ? (
+          <div className="p-12 text-center text-muted-text bg-card-surface/40 rounded-2xl border border-outline-variant/20">
+            <span className="material-symbols-outlined text-[40px] opacity-40 mb-2">cloud_off</span>
+            <p className="font-headline-md text-lg text-on-surface">Cannot load past analyses</p>
+            <p className="text-sm mt-1">{serverError}</p>
+            <button
+              onClick={retryConnection}
+              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-coral-accent text-white text-xs font-label-md hover:bg-primary transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">refresh</span>
+              Retry connection
+            </button>
+          </div>
+        ) : filteredAnalyses.length === 0 ? (
           <div className="p-12 text-center text-muted-text bg-card-surface/40 rounded-2xl border border-outline-variant/20">
             <span className="material-symbols-outlined text-[40px] opacity-40 mb-2">history</span>
             <p className="font-headline-md text-lg text-on-surface">No past analyses yet</p>

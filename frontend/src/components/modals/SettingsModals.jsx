@@ -9,11 +9,13 @@ export function UpdateEmailModal({ isOpen, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!email.includes('@') || !email.includes('.')) {
+    const trimmed = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(trimmed)) {
       addToast("Please enter a valid email address.", "error");
       return;
     }
-    updateUserSettings({ email });
+    updateUserSettings({ email: trimmed });
     onClose();
   };
 

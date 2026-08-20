@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
+import { api } from '../api/client';
 import EvidenceCard from '../components/chat/EvidenceCard';
 import CitationBadge from '../components/chat/CitationBadge';
 import DebugPanel from '../components/chat/DebugPanel';
@@ -14,12 +15,15 @@ export default function ChatWorkspace() {
     startNewChat,
     documents,
     selectedScope,
+    serverError,
+    retryConnection,
   } = useApp();
 
   const [followUpText, setFollowUpText] = useState('');
   const [highlightedEvidenceId, setHighlightedEvidenceId] = useState(null);
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [logs, setLogs] = useState([]);
+  const [logsError, setLogsError] = useState(null);
   const chatBottomRef = useRef(null);
 
   const indexedDocs = documents.filter((d) => d.status === 'Indexed');
@@ -53,12 +57,13 @@ export default function ChatWorkspace() {
 
   const handleOpenLogs = async () => {
     setShowLogsModal(true);
+    setLogsError(null);
+    setLogs([]);
     try {
-      const res = await fetch('/api/logs?lines=40');
-      const data = await res.json();
+      const data = await api.getLogs(40);
       setLogs(data.logs || []);
     } catch (err) {
-      console.error('Failed to fetch logs:', err);
+      setLogsError(err.message);
     }
   };
 
@@ -96,6 +101,25 @@ export default function ChatWorkspace() {
       {/* Chat Feed Scroll Area */}
       <div className="flex-1 overflow-y-auto w-full flex justify-center pb-36 pt-6 px-margin-mobile md:px-margin-desktop scroll-smooth">
         <div className="w-full max-w-content-max-width space-y-10">
+          {serverError && (
+            <div className="rounded-xl border border-error/30 bg-error-container/10 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-3 flex-1">
+                <span className="material-symbols-outlined text-error">cloud_off</span>
+                <div>
+                  <p className="text-sm font-semibold text-on-surface">Cannot reach the DocuMind server</p>
+                  <p className="text-xs text-muted-text mt-0.5">{serverError}</p>
+                </div>
+              </div>
+              <button
+                onClick={retryConnection}
+                className="text-xs font-semibold text-coral-accent hover:text-primary transition-colors inline-flex items-center gap-1 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[14px]">refresh</span>
+                Retry connection
+              </button>
+            </div>
+          )}
+
           {chatMessages.length === 0 && !isAiThinking && (
             <div className="text-center py-20 text-muted-text">
               <span className="material-symbols-outlined text-[44px] text-coral-accent/60 mb-3">
@@ -278,7 +302,11 @@ export default function ChatWorkspace() {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-1 text-emerald-400 bg-black/60">
-              {logs.length === 0 ? (
+              {logsError ? (
+                <p className="text-red-400 whitespace-pre-wrap leading-relaxed">
+                  {logsError}
+                </p>
+              ) : logs.length === 0 ? (
                 <p className="text-muted-text">No pipeline logs available yet.</p>
               ) : (
                 logs.map((line, idx) => (

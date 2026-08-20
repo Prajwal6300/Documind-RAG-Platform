@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../api/client';
 
 export default function TopNav({ showBackButton = true }) {
   const navigate = useNavigate();
@@ -12,16 +13,39 @@ export default function TopNav({ showBackButton = true }) {
     addToast
   } = useApp();
 
+  const [health, setHealth] = useState(null);
+  const [healthChecking, setHealthChecking] = useState(false);
+
+  const checkHealth = async () => {
+    setHealthChecking(true);
+    try {
+      const data = await api.getHealth();
+      setHealth(data);
+      addToast(
+        `Gemini: ${data?.gemini?.ready ? 'Ready' : 'Not ready'} · Database: ${data?.database?.status === 'ok' ? 'Connected' : 'Unavailable'} · Status: ${data?.status}`,
+        'info'
+      );
+    } catch (err) {
+      setHealth(null);
+      addToast(`Health check failed: ${err.message}`, 'error');
+    } finally {
+      setHealthChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    api.getHealth().then(setHealth).catch(() => setHealth(null));
+  }, []);
+
+  const isBackendOk = health?.status === 'healthy' || health?.status === 'degraded';
+  const geminiReady = health?.gemini?.ready === true;
+
   const handleBack = () => {
     if (window.history.length > 1 && location.pathname !== '/') {
       navigate(-1);
     } else {
       navigate('/');
     }
-  };
-
-  const handleGeminiStatus = () => {
-    addToast("Gemini 1.5 Pro inference engine is healthy and active.", "info");
   };
 
   return (
@@ -69,13 +93,25 @@ export default function TopNav({ showBackButton = true }) {
       <div className="flex items-center gap-4 sm:gap-6">
         {/* Gemini Active Status Pill */}
         <button
-          onClick={handleGeminiStatus}
-          className="flex items-center gap-2 px-2.5 py-1 rounded-full hover:bg-surface-container transition-colors cursor-pointer text-xs sm:text-sm font-label-md"
+          onClick={checkHealth}
+          disabled={healthChecking}
+          className="flex items-center gap-2 px-2.5 py-1 rounded-full hover:bg-surface-container transition-colors cursor-pointer text-xs sm:text-sm font-label-md disabled:opacity-60"
           title="Click to check model telemetry"
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span
+            className={`w-2 h-2 rounded-full ${
+              healthChecking ? 'bg-amber-400 animate-pulse'
+              : isBackendOk
+                ? geminiReady ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'
+                : 'bg-red-500'
+            }`}
+          />
           <span className="text-on-surface-variant font-medium hover:text-coral-accent transition-colors">
-            Gemini · Ready
+            {healthChecking
+              ? 'Checking...'
+              : isBackendOk
+                ? geminiReady ? 'Gemini · Ready' : 'Gemini · Degraded'
+                : 'Server · Unreachable'}
           </span>
         </button>
 
