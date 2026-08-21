@@ -29,7 +29,7 @@ graph TD
         QR --> H2["Lexical BM25 Search + Exact Match Boosting"]
         H1 & H2 --> M["Merged & Deduplicated Top-16 Candidates"]
         M --> RR["Neural Cross-Encoder Re-Ranker (ms-marco-MiniLM-L-6-v2)"]
-        RR --> SG{"Anti-Hallucination Sufficiency Gate"}
+        RR --> SG{"Anti-Hallucination Sufficiency Gate"}      
     end
 
     subgraph Generation ["3. Grounded Synthesis & Observability"]
