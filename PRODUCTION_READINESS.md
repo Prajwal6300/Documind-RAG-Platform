@@ -38,7 +38,7 @@ All verifications below were performed with a **real Gemini API key** loaded fro
 | Total latency (grounded query) | ~43 seconds |
 | — Retrieval + reranking | ~6–11 seconds |
 | — Gemini generation | ~31–36 seconds |
-| Total latency (refusal query) | ~43 seconds |
+| Total latency (refusal query) | ~43 seconds |                     
 
 ## 3. Cross-Encoder Re-Ranker — Active
 
