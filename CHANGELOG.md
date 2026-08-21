@@ -39,7 +39,7 @@ All notable changes to the **DocuMind Enterprise RAG Document Platform** are doc
 - **`scripts/run_migrations.py`**: Automated migration runner executing `migrations/001_initial_supabase_schema.sql`.
 - **`scripts/migrate_to_supabase.py`**: Data migration script transferring existing SQLite metadata and ChromaDB embeddings into Supabase.
 - **`SUPABASE_SETUP.md` & `docs/architecture.md`**: Complete documentation covering Supabase connection setup, poolers, indexing, and system architecture.
-
+                                      
 ---
 
 ## [v2.0.1] - Entrypoint Unification & Run Path Clarification
