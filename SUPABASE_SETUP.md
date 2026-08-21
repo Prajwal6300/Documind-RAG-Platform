@@ -77,7 +77,7 @@ python -c "import psycopg, os, dotenv; dotenv.load_dotenv(); conn = psycopg.conn
 ```bash
 # Run End-to-End FastAPI Verification
 python tests/test_e2e_verification.py
-
+                                
 # Run 35-Query Evaluation Benchmark
 python scripts/eval.py
 ```
