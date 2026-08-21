@@ -135,7 +135,7 @@ cd ..
 > [!IMPORTANT]
 > **Single Correct Run Path**: DocuMind uses a decoupled architecture with a **FastAPI backend** on port `8000` and a **React + Vite frontend** on port `5173`. Run the backend with `uvicorn backend.main:app` and the frontend with `npm run dev --prefix frontend`.
 
-### Option A: One-Command Startup (Recommended)
+### Option A: One-Command Startup (Recommended)                      
 **Windows PowerShell:**
 ```powershell
 .\scripts\start.ps1
