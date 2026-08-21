@@ -314,8 +314,19 @@ def _remove_document_by_id(doc_id: str):
 
 
 def remove_document(doc_id: str):
-    """Delete chunks and document records by doc_id."""
-    _remove_document_by_id(doc_id)
+    """Delete chunks and document records by doc_id.
+
+    The document_chunks table has ON DELETE CASCADE FK to documents(id),
+    so deleting from documents alone would cascade. We still explicitly
+    remove chunks first for clarity and to ensure pgvector index entries
+    are cleaned up predictably.
+    """
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM document_chunks WHERE document_id = %s;", (doc_id,))
+    # This also deletes the document row; FK ON DELETE CASCADE ensures
+    # any remaining chunk rows are cleaned up by the database.
+    delete_document_permanently(doc_id)
 
 
 def clear_all_documents():

@@ -8,6 +8,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const {
     userSettings,
+    isLoadingSettings,
     setIsAvatarModalOpen,
     toggleNotification,
     togglePrivacy,
@@ -18,7 +19,7 @@ export default function SettingsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleManagePlan = () => {
-    addToast("Subscription tier: Premium (Annual). Enterprise invoice downloaded.", "info");
+    addToast(`Current plan from workspace settings: ${userSettings.plan || 'Not configured'}.`, "info");
   };
 
   return (
@@ -51,12 +52,18 @@ export default function SettingsPage() {
             <span>Account</span>
           </h2>
           <div className="bg-card-surface rounded-2xl border border-outline-variant/30 overflow-hidden divide-y divide-outline-variant/20 shadow-xs">
+            {isLoadingSettings && (
+              <div className="p-4 text-xs text-muted-text flex items-center gap-2">
+                <span className="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>
+                Loading saved workspace settings...
+              </div>
+            )}
             {/* Profile Setting */}
             <div className="p-6 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between hover:bg-surface-container-highest/60 transition-colors">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 rounded-full bg-surface-container border border-outline-variant overflow-hidden shrink-0 shadow-xs">
                   <img
-                    src={userSettings.avatarUrl}
+                    src={userSettings.avatarUrl || '/DocuMind_Logo_4K.png'}
                     alt="Profile"
                     className="w-full h-full object-cover"
                     style={{
@@ -88,7 +95,8 @@ export default function SettingsPage() {
                   Email Address
                 </h3>
                 <p className="font-body-md text-muted-text text-sm mb-1 mt-0.5">
-                  Your current active email is <strong className="text-on-surface">{userSettings.email}</strong>
+                  Your current active email is{' '}
+                  <strong className="text-on-surface">{userSettings.email || 'not configured'}</strong>
                 </p>
               </div>
               <button

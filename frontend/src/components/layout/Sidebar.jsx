@@ -13,6 +13,7 @@ export default function Sidebar() {
   } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+  const indexedDocs = documents.filter((doc) => doc.status === 'Indexed');
 
   const navItems = [
     { label: 'New Chat', path: '/', icon: 'add_box' },
@@ -79,8 +80,7 @@ export default function Sidebar() {
               alt="DocuMind Logo"
               className="w-full h-full object-contain group-hover:scale-105 transition-transform"
               onError={(e) => {
-                // Fallback to Google hosted logo if local not found
-                e.target.src = "https://lh3.googleusercontent.com/aida-public/AB6AXuAuiu6wa71gz2vKPDp45wCy7ewP3vEEQVWK1bJdeKyKQVs5B_IAu0Gc9fP5NNpUX-tM-udr-wtKbLJ1S49rjLE9yCIMIAYjS0N6oiau9RTck46ymwPXXDoPETKVRRvr8ivE90pKmqjrvOp0bl-x4oJRK6gQAAqqygDrQTL67-tjp-inMrHzApNQvbO0qdfWkMRUFN-4iUGqELjbwDxOlFZsPbHx0yfOJGaPjjVxYM5cDFl5V_wvAgIKsYtJSF9aqyyBYok";
+                e.currentTarget.style.display = 'none';
               }}
             />
           </div>
@@ -143,11 +143,11 @@ export default function Sidebar() {
                 Indexed Documents
               </h2>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-container-highest text-secondary">
-                {documents.length}
+                {indexedDocs.length}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">
-              {documents.slice(0, 5).map((doc) => (
+              {indexedDocs.slice(0, 5).map((doc) => (
                 <button
                   key={doc.id}
                   onClick={() => handleDocClick(doc)}
@@ -167,12 +167,12 @@ export default function Sidebar() {
                   )}
                 </button>
               ))}
-              {documents.length > 5 && (
+              {indexedDocs.length > 5 && (
                 <button
                   onClick={() => { navigate('/library'); closeSidebar(); }}
                   className="text-left px-3 py-1 text-xs text-coral-accent hover:underline font-label-sm mt-1"
                 >
-                  + {documents.length - 5} more in Library →
+                  + {indexedDocs.length - 5} more in Library →
                 </button>
               )}
             </div>
@@ -214,7 +214,7 @@ export default function Sidebar() {
           >
             <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant shrink-0">
               <img
-                src={userSettings.avatarUrl}
+                src={userSettings.avatarUrl || '/DocuMind_Logo_4K.png'}
                 alt={userSettings.name}
                 className="w-full h-full object-cover"
                 style={{

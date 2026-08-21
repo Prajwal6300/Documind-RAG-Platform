@@ -8,7 +8,6 @@ import os
 from typing import Generator
 from dotenv import load_dotenv
 from google import genai
-from google.genai import types
 
 from backend.src.utils.config import (
     GEMINI_API_KEY,
@@ -191,15 +190,18 @@ def generate_answer(question: str, context: str, conversation: str | None = None
     context = _trim_context(context)
     prompt = build_rag_prompt(question, context, conversation)
 
+    max_attempts = min(len(candidate_models), 3)
     last_exc = None
+    attempted = 0
     for model in candidate_models:
+        attempted += 1
         try:
-            config = types.GenerateContentConfig(
+            config = genai.types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 temperature=temperature,
                 max_output_tokens=max_tokens,
-                http_options=types.HttpOptions(timeout=int(timeout * 1000)),
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                http_options=genai.types.HttpOptions(timeout=int(timeout * 1000)),
+                automatic_function_calling=genai.types.AutomaticFunctionCallingConfig(disable=True),
             )
 
             response = client.models.generate_content(
@@ -227,6 +229,9 @@ def generate_answer(question: str, context: str, conversation: str | None = None
                 or "resource_exhausted" in err_str
                 or "quota" in err_str
             ):
+                if attempted >= max_attempts:
+                    logger.warning("Gemini model exhausted after %d attempts, returning last error.", attempted)
+                    return _format_and_log_error(last_exc, context_msg="generate_answer")
                 continue
             return _format_and_log_error(exc, context_msg="generate_answer")
 
@@ -263,12 +268,12 @@ def generate_answer_stream(question: str, context: str, conversation: str | None
     last_exc = None
     for model in candidate_models:
         try:
-            config = types.GenerateContentConfig(
+            config = genai.types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 temperature=temperature,
                 max_output_tokens=max_tokens,
-                http_options=types.HttpOptions(timeout=int(timeout * 1000)),
-                automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+                http_options=genai.types.HttpOptions(timeout=int(timeout * 1000)),
+                automatic_function_calling=genai.types.AutomaticFunctionCallingConfig(disable=True),
             )
 
             response_stream = client.models.generate_content_stream(

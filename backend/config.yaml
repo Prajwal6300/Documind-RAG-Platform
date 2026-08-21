@@ -60,7 +60,8 @@ retrieval:
   keyword_match_required: 0.30
   max_summary_chunks: 10
   enable_context_expansion: true
-  max_expansion_chunks: 2
+  groundedness_threshold: 0.55
+  min_rerank_score: 0.30
   weights:
     semantic: 0.50
     lexical: 0.30

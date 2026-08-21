@@ -38,7 +38,9 @@ export default function LibraryPage() {
         const matchesSearch =
           !searchFilter.trim() ||
           doc.name.toLowerCase().includes(searchFilter.toLowerCase()) ||
-          doc.title?.toLowerCase().includes(searchFilter.toLowerCase());
+          doc.title?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+          doc.documentSummary?.toLowerCase().includes(searchFilter.toLowerCase()) ||
+          doc.documentType?.toLowerCase().includes(searchFilter.toLowerCase());
         return matchesType && matchesSearch;
       })
       .sort((a, b) => {
@@ -54,7 +56,10 @@ export default function LibraryPage() {
   }, [documents, selectedType, sortBy, searchFilter]);
 
   const handleView = (doc) => {
-    addToast(`"${doc.name}" is ${doc.status.toLowerCase()} (${doc.pages} pages, ${doc.chunks} chunks, ${doc.size}).`, 'info');
+    const analyzed = doc.analysisStatus === 'analyzed' && doc.documentSummary
+      ? `${doc.documentType || 'document'}: ${doc.documentSummary}`
+      : doc.warning || `Analysis status: ${doc.analysisStatus || 'pending'}`;
+    addToast(`"${doc.name}" ${analyzed}`, 'info');
   };
 
   const handleDownload = (doc) => {
@@ -241,10 +246,32 @@ export default function LibraryPage() {
                       </span>
                     </div>
                     <div className="min-w-0">
-                      <h2 className="text-headline-md font-headline-md text-on-surface truncate text-base leading-tight font-medium">
-                        {doc.title || doc.name}
-                      </h2>
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-headline-md font-headline-md text-on-surface truncate text-base leading-tight font-medium">
+                          {doc.title || doc.name}
+                        </h2>
+                        {doc.documentType && doc.analysisStatus === 'analyzed' && (
+                          <span
+                            className="inline-flex items-center px-1.5 py-0.5 rounded bg-secondary/10 text-secondary border border-secondary/20 text-[10px] font-medium shrink-0 capitalize"
+                            title={doc.documentSummary || doc.documentType}
+                          >
+                            {doc.documentType.replaceAll('_', ' ')}
+                          </span>
+                        )}
+                        {doc.is_low_text && (
+                          <span
+                            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 border border-amber-500/30 text-[10px] font-medium shrink-0"
+                            title={doc.warning || "This document appears to contain very little extractable text — answers may be limited."}
+                          >
+                            <span className="material-symbols-outlined text-[12px]">warning</span>
+                            <span>Low Text</span>
+                          </span>
+                        )}
+                      </div>
                       <p className="text-label-sm font-label-sm text-muted-text mt-0.5 truncate text-xs">
+                        {doc.documentSummary || `${doc.size} • ${doc.pages} ${doc.pages === 1 ? 'Page' : 'Pages'} • ${doc.chunks} ${doc.chunks === 1 ? 'Chunk' : 'Chunks'}`}
+                      </p>
+                      <p className="text-[11px] text-muted-text/80 mt-0.5 truncate">
                         {doc.size} • {doc.pages} {doc.pages === 1 ? 'Page' : 'Pages'} • {doc.chunks} {doc.chunks === 1 ? 'Chunk' : 'Chunks'}
                       </p>
                     </div>

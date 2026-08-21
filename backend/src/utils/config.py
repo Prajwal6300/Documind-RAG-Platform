@@ -125,6 +125,9 @@ MAX_SUMMARY_CHUNKS = _get_val("retrieval", "max_summary_chunks", "MAX_SUMMARY_CH
 ENABLE_CONTEXT_EXPANSION = _get_val("retrieval", "enable_context_expansion", "ENABLE_CONTEXT_EXPANSION", True)
 MAX_EXPANSION_CHUNKS = _get_val("retrieval", "max_expansion_chunks", "MAX_EXPANSION_CHUNKS", 2)
 
+GROUNDEDNESS_THRESHOLD = _get_val("retrieval", "groundedness_threshold", "GROUNDEDNESS_THRESHOLD", 0.55)
+MIN_RERANK_SCORE = _get_val("retrieval", "min_rerank_score", "MIN_RERANK_SCORE", 0.30)
+
 # Hybrid ranking weights
 _weights = _YAML_CONFIG.get("retrieval", {}).get("weights", {})
 SEMANTIC_WEIGHT = float(os.getenv("SEMANTIC_WEIGHT", str(_weights.get("semantic", 0.50))))
@@ -180,6 +183,8 @@ def get_config():
             "max_context_tokens": MAX_CONTEXT_TOKENS,
             "relevance_threshold": RELEVANCE_THRESHOLD,
             "strong_relevance_threshold": STRONG_RELEVANCE_THRESHOLD,
+            "groundedness_threshold": GROUNDEDNESS_THRESHOLD,
+            "min_rerank_score": MIN_RERANK_SCORE,
             "weights": {
                 "semantic": SEMANTIC_WEIGHT,
                 "lexical": LEXICAL_WEIGHT,

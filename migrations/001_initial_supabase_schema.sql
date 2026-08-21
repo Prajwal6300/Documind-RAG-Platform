@@ -19,6 +19,16 @@ CREATE TABLE IF NOT EXISTS documents (
     file_path TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'processing',
     error_message TEXT DEFAULT '',
+    warning_message TEXT DEFAULT '',
+    is_low_text BOOLEAN DEFAULT FALSE,
+    content_hash TEXT DEFAULT '',
+    doc_summary TEXT DEFAULT '',
+    doc_category TEXT DEFAULT '',
+    entities_json JSONB DEFAULT '[]'::jsonb,
+    structure_json JSONB DEFAULT '[]'::jsonb,
+    suggested_questions_json JSONB DEFAULT '[]'::jsonb,
+    analysis_status TEXT DEFAULT 'pending',
+    analysis_warnings_json JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     is_archived BOOLEAN NOT NULL DEFAULT FALSE,
     archived_at TIMESTAMPTZ DEFAULT NULL
@@ -67,6 +77,13 @@ CREATE TABLE IF NOT EXISTS document_chunks (
 
 -- 6. Relational & Query Indexes
 CREATE INDEX IF NOT EXISTS idx_docs_archived ON documents(is_archived, status);
+-- Run the deduplication dry run before applying this migration to an existing
+-- database.  Active uploads are protected by this partial unique constraint;
+-- archived copies may be retained for audit/history.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_docs_active_content_hash
+ON documents(content_hash)
+WHERE content_hash <> '' AND is_archived = FALSE;
+CREATE INDEX IF NOT EXISTS idx_docs_category ON documents(doc_category);
 CREATE INDEX IF NOT EXISTS idx_docs_created ON documents(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_updated ON chat_sessions(updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_archived ON chat_sessions(is_archived);

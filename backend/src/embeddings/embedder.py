@@ -102,6 +102,8 @@ def embed_documents(documents: list[str]) -> list[list[float]]:
     return raw.tolist()
 
 
+ZERO_EMBEDDING = tuple([0.0] * 3072)
+
 @lru_cache(maxsize=512)
 def _embed_query_cached(query: str) -> tuple[float, ...]:
     """Internal cached implementation of query embedding."""
@@ -117,6 +119,9 @@ def _embed_query_cached(query: str) -> tuple[float, ...]:
             if response.embeddings:
                 return tuple(_normalize_vector(response.embeddings[0].values))
         except Exception as exc:
+            if EMBEDDING_PROVIDER == "gemini":
+                logger.warning("Gemini query embed failed (%s), using zero embedding fallback.", exc)
+                return ZERO_EMBEDDING
             logger.warning("Gemini query embed failed (%s), falling back to local.", exc)
 
     local = _get_local_model()

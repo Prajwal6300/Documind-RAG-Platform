@@ -2,7 +2,28 @@
 
 All notable changes to the **DocuMind Enterprise RAG Document Platform** are documented in this file in chronological order.
 
-## [v3.0.0] - Storage Layer Migration to Supabase (PostgreSQL + pgvector)
+## [v3.0.1] - Duplicate Document Cleanup & Google GenAI SDK Migration (2026-08-22)
+
+### 1. Duplicate Document Removal
+- **9 redundant document records deleted** from Supabase PostgreSQL via `scripts/deduplicate_documents.py --apply`
+- Removed 8 duplicate copies of `company_policy.pdf` and 1 duplicate of `employee_policy.txt`
+- Kept primary records: `doc-ce739fd17ffd` (company_policy.pdf, 3 chunks) and `eval-doc-employee_policy` (employee_policy.txt, 1 chunk)
+- **'Files Indexed' count corrected**: 26 → 17, reflecting real document count after dedup
+- Re-running dry-run confirms 0 duplicate groups remain; vector store is fully clean
+
+### 2. Google GenAI SDK Migration
+- **Backend** (`backend/src/llm/llm_client.py`): Replaced `import google.generativeai as genai` (deprecated v0.8.6, EOL) with `from google import genai` (google-genai SDK v2.3.0)
+- **Analysis** (`backend/src/analysis/document_analyzer.py`): Same import fix applied
+- All `types.*` references updated to `genai.types.*` to match new SDK API shape
+- `generate_answer()`, `generate_answer_stream()`, and `get_llm_status()` all function correctly with new SDK
+- No functional API changes — same `generate_answer`, `generate_answer_stream`, `get_llm_status` signatures preserved
+
+### 3. Guardrail Test Suite Fix
+- Fixed `from google import genai` import conflict in `llm_client.py` and `document_analyzer.py`
+- Re-running `tests/test_grounding_guardrails.py`: **all 5 tests pass** (previously failed on import)
+- Guardrail tests verified: grounded answer citation, low-groundedness refusal, stream refusal-before-unvalidated, scoped document retrieval, analysis fabricated terms discarding
+
+---
 
 ### 1. Unified Cloud PostgreSQL & pgvector Schema
 - **Relational Schema Migration**: Migrated all local SQLite tables (`documents`, `chat_sessions`, `chat_messages`) to Supabase PostgreSQL 17.6 with foreign key constraints, `ON DELETE CASCADE`, and JSONB payloads.
@@ -24,7 +45,7 @@ All notable changes to the **DocuMind Enterprise RAG Document Platform** are doc
 ## [v2.0.1] - Entrypoint Unification & Run Path Clarification
 
 ### 1. Architecture Cleanup & Entrypoint Unification
-- **Legacy Streamlit Relocation**: Moved monolithic prototype `app.py` from root to `legacy/streamlit_app.py` and added `legacy/README.md` to prevent conflicting run paths (`python app.py`).
+- **Legacy Streamlit retirement**: Removed the retired Streamlit prototype and its pre-migration ChromaDB implementation. The supported application is the FastAPI backend plus React/Vite frontend.
 - **FastAPI Backend Entrypoint**: Standardized the backend execution path to `uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload` (or `python -m backend.main`).
 - **Proxy Alignment**: Verified and confirmed `frontend/vite.config.js` proxies `/api/*`, `/documents/*`, and `/chat/*` directly to `http://127.0.0.1:8000`.
 - **Dependencies Sync**: Updated root `requirements.txt` and `backend/requirements.txt` with `fastapi`, `uvicorn[standard]`, and `python-multipart`.

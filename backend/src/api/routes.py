@@ -15,6 +15,7 @@ the shape ``{"detail": "..."}`` and an appropriate status code
 
 import os
 import json
+import re
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -34,7 +35,7 @@ from backend.src.utils.config import (
     RATE_LIMIT_UPLOAD_LIMIT,
     RATE_LIMIT_UPLOAD_WINDOW,
 )
-from backend.src.utils.helpers import format_file_size, format_doc_response
+from backend.src.utils.helpers import format_file_size, format_doc_response, file_hash
 from backend.src.utils.logger import log_pipeline_event, get_recent_logs
 from backend.src.utils.errors import (
     bad_request,
@@ -46,6 +47,7 @@ from backend.src.utils.rate_limit import check_rate_limit
 from backend.src.utils.uploads import validate_upload, sanitize_filename
 from backend.src.ingestion import load_document
 from backend.src.chunking import create_chunks
+from backend.src.analysis import analyze_document_text
 from backend.src.vectordb import (
     add_chunks,
     remove_document,
@@ -53,6 +55,8 @@ from backend.src.vectordb import (
     update_document_status,
     get_document_by_id,
     get_document_by_name,
+    get_document_by_content_hash,
+    DuplicateContentError,
     list_all_documents,
     set_document_archived,
     delete_document_permanently,
@@ -64,9 +68,14 @@ from backend.src.vectordb import (
     delete_chat_session_permanently,
     insert_chat_message,
     get_session_messages,
+    get_workspace_settings,
+    update_workspace_settings,
+    list_support_guides,
+    create_support_ticket,
 )
 from backend.src.pipeline import answer_question, answer_question_stream
 from backend.src.llm import get_llm_status
+from backend.src.prompts.prompt_templates import NO_CONTEXT_MESSAGE
 
 router = APIRouter()
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -100,6 +109,21 @@ def _process_document_pipeline(doc_id: str, file_path: str, original_filename: s
 
         log_pipeline_event("parse_success", {"doc_id": doc_id, "pages": len(pages)})
 
+        # Detect low-text documents (e.g. certificates, image-heavy PDFs, scanned docs)
+        total_text_chars = sum(len((p.get("text") or "").strip()) for p in pages)
+        is_low_text = total_text_chars < 120
+        warning_msg = ""
+        if is_low_text:
+            warning_msg = (
+                f"This document appears to contain very little extractable text ({total_text_chars} characters). "
+                "Answers to questions about image or certificate content may be limited."
+            )
+            log_pipeline_event("low_text_warning", {
+                "doc_id": doc_id,
+                "filename": original_filename,
+                "total_chars": total_text_chars,
+            })
+
         chunks = create_chunks(
             pages=pages,
             source=original_filename,
@@ -111,15 +135,34 @@ def _process_document_pipeline(doc_id: str, file_path: str, original_filename: s
 
         log_pipeline_event("chunk_success", {"doc_id": doc_id, "chunks": len(chunks)})
 
+        log_pipeline_event("analysis_start", {"doc_id": doc_id, "filename": original_filename})
+        analysis = analyze_document_text(pages, original_filename, is_low_text=is_low_text)
+        log_pipeline_event("analysis_success", {
+            "doc_id": doc_id,
+            "status": analysis.get("analysis_status"),
+            "document_type": analysis.get("document_type"),
+            "entities": analysis.get("entities", [])[:8],
+            "structure_count": len(analysis.get("structure", [])),
+            "low_content": is_low_text,
+        })
+
         # Upsert chunks with embeddings into Supabase document_chunks
         add_chunks(chunks)
 
         log_pipeline_event("embed_success", {"doc_id": doc_id, "indexed_chunks": len(chunks)})
 
-        # Update database with real page count and chunk count
+        # Update database with real page count, chunk count, and low-text status
         page_count = len(pages)
         chunk_count = len(chunks)
-        update_document_status(doc_id, "indexed", pages=page_count, chunks=chunk_count)
+        update_document_status(
+            doc_id,
+            "indexed",
+            pages=page_count,
+            chunks=chunk_count,
+            warning_message=warning_msg,
+            is_low_text=is_low_text,
+            analysis=analysis,
+        )
 
     except Exception as exc:
         err_msg = str(exc)
@@ -157,15 +200,25 @@ async def upload_document(
     size_bytes = len(content)
     size_str = format_file_size(size_bytes)
     file_type = detected_ext.upper()
+    c_hash = file_hash(content)
 
     doc_id = f"doc-{uuid.uuid4().hex[:12]}"
     saved_filename = f"{doc_id}_{safe_name}"
     saved_path = UPLOAD_DIR / saved_filename
 
     try:
-        # Reject exact duplicate uploads (same name) to avoid silent re-index conflicts
-        existing = get_document_by_name(safe_name)
-        if existing:
+        # Check 1: Reject duplicate uploads with identical content hash
+        existing_hash = get_document_by_content_hash(c_hash)
+        if existing_hash:
+            raise conflict(
+                f"A document with identical content ('{existing_hash['name']}') already exists in the library. "
+                "Archive or delete it first, or use the existing document for questions.",
+                "duplicate_content",
+            )
+
+        # Check 2: Reject duplicate uploads with exact same name
+        existing_name = get_document_by_name(safe_name)
+        if existing_name:
             raise conflict(
                 f"A document named '{safe_name}' already exists in the library. "
                 "Archive or delete it first, or rename the file before uploading.",
@@ -190,10 +243,27 @@ async def upload_document(
         "chunks": 0,
         "file_path": str(saved_path),
         "status": "processing",
+        "content_hash": c_hash,
+        "warning_message": "",
+        "is_low_text": False,
+        "doc_summary": "",
+        "doc_category": "",
+        "entities": [],
+        "structure": [],
+        "suggested_questions": [],
+        "analysis_status": "pending",
+        "analysis_warnings": [],
     }
 
     try:
         inserted = insert_document(doc_record)
+    except DuplicateContentError as exc:
+        if saved_path.exists():
+            saved_path.unlink()
+        raise conflict(
+            f"A document with identical content ('{exc.existing['name']}') already exists in the library.",
+            "duplicate_content",
+        ) from exc
     except Exception as exc:
         # Clean up the orphaned file if DB write failed
         if saved_path.exists():
@@ -207,6 +277,7 @@ async def upload_document(
         "doc_id": doc_id,
         "filename": safe_name,
         "size": size_str,
+        "content_hash": c_hash[:12],
     })
 
     # Trigger indexing in background
@@ -377,6 +448,24 @@ class ChatRequest(BaseModel):
     session_id: Optional[str] = None
 
 
+class WorkspaceSettingsUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    avatarUrl: Optional[str] = None
+    avatarZoom: Optional[int] = Field(None, ge=100, le=200)
+    avatarPos: Optional[dict] = None
+    notifications: Optional[dict] = None
+    privacy: Optional[dict] = None
+
+
+class SupportTicketRequest(BaseModel):
+    subject: str = Field(..., min_length=1, max_length=200)
+    category: str = Field(..., min_length=1, max_length=100)
+    message: str = Field(..., min_length=1, max_length=4000)
+    requesterEmail: Optional[str] = None
+
+
 def _validate_chat_message(message: str) -> str:
     user_query = (message or "").strip()
     if not user_query:
@@ -448,6 +537,11 @@ def handle_chat(request: Request, payload: ChatRequest):
             if d["name"].lower() == payload.scope.lower() or d["id"] == payload.scope or d["title"].lower() == payload.scope.lower():
                 target_doc_id = d["id"]
                 break
+        if target_doc_id is None:
+            return _no_context_response(
+                payload.session_id,
+                f"I couldn't find an indexed document matching '{payload.scope}'. Please choose an indexed document from the scope selector.",
+            )
 
     # Get or create chat session
     session_id = payload.session_id
@@ -492,8 +586,14 @@ def handle_chat(request: Request, payload: ChatRequest):
     sources = result.get("sources") or []
     evidences = result.get("evidences") or []
     no_context = result.get("no_context", False)
-    groundedness = result.get("groundedness") or {"score": 0.0, "confidence": "Low"}
+    groundedness = result.get("groundedness") or {"score": 0.0, "confidence": "Low", "is_grounded": False}
     debug_info = result.get("debug")
+
+    if no_context or intro == NO_CONTEXT_MESSAGE:
+        sections = []
+        sources = []
+        evidences = []
+        no_context = True
 
     # Save assistant message
     try:
@@ -544,8 +644,25 @@ def handle_chat_stream(request: Request, payload: ChatRequest):
     try:
         active_docs = list_all_documents(include_archived=False)
         indexed_docs = [d for d in active_docs if d.get("status") == "indexed"]
+        processing_docs = [d for d in active_docs if d.get("status") == "processing"]
     except Exception as exc:
         raise _handle_db_exception(exc) from exc
+
+    if payload.scope and payload.scope != "All Documents":
+        for pd in processing_docs:
+            if pd["name"].lower() == payload.scope.lower() or pd["id"] == payload.scope:
+                def processing_generator():
+                    msg = f"Document '{pd['name']}' is currently being indexed. Please wait a moment until processing finishes."
+                    yield f"data: {json.dumps({'type': 'token', 'token': msg})}\n\n"
+                    yield f"data: {json.dumps({'type': 'done', 'no_context': True})}\n\n"
+                return StreamingResponse(processing_generator(), media_type="text/event-stream")
+
+    if not indexed_docs:
+        def no_docs_generator():
+            msg = "I couldn't find that in your uploaded documents because no documents have been uploaded and indexed yet. Please upload a PDF, DOCX, or TXT document first."
+            yield f"data: {json.dumps({'type': 'token', 'token': msg})}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'no_context': True})}\n\n"
+        return StreamingResponse(no_docs_generator(), media_type="text/event-stream")
 
     target_doc_id = None
     if payload.scope and payload.scope != "All Documents":
@@ -553,6 +670,12 @@ def handle_chat_stream(request: Request, payload: ChatRequest):
             if d["name"].lower() == payload.scope.lower() or d["id"] == payload.scope:
                 target_doc_id = d["id"]
                 break
+        if target_doc_id is None:
+            def missing_scope_generator():
+                msg = f"I couldn't find an indexed document matching '{payload.scope}'. Please choose an indexed document from the scope selector."
+                yield f"data: {json.dumps({'type': 'token', 'token': msg})}\n\n"
+                yield f"data: {json.dumps({'type': 'done', 'no_context': True})}\n\n"
+            return StreamingResponse(missing_scope_generator(), media_type="text/event-stream")
 
     session_id = payload.session_id or f"session-{uuid.uuid4().hex[:10]}"
     try:
@@ -683,11 +806,21 @@ def get_suggested_questions():
     questions = []
 
     if len(doc_names) >= 1:
-        questions.append({
-            "id": "q-1",
-            "title": f"Summarize key findings in {doc_names[0]}",
-            "prompt": f"Summarize the key points, main conclusions, and findings from {doc_names[0]}."
-        })
+        first_doc = indexed_docs[0]
+        first_type = (first_doc.get("doc_category") or first_doc.get("documentType") or first_doc.get("type") or "document").replace("_", " ")
+        first_suggested = first_doc.get("suggested_questions") or []
+        if first_suggested:
+            questions.append({
+                "id": "q-1",
+                "title": first_suggested[0],
+                "prompt": first_suggested[0],
+            })
+        else:
+            questions.append({
+                "id": "q-1",
+                "title": f"What are the key details in this {first_type}?",
+                "prompt": f"What are the key details in {doc_names[0]}?",
+            })
 
     if len(doc_names) >= 2:
         questions.append({
@@ -695,26 +828,35 @@ def get_suggested_questions():
             "title": f"Compare {doc_names[0]} and {doc_names[1]}",
             "prompt": f"Compare the information and key differences between {doc_names[0]} and {doc_names[1]}."
         })
-    else:
+
+    for d in indexed_docs:
+        for question in d.get("suggested_questions", []) or []:
+            if len(questions) >= 4:
+                break
+            if question and all(q["prompt"].lower() != question.lower() for q in questions):
+                questions.append({
+                    "id": f"q-{len(questions) + 1}",
+                    "title": question,
+                    "prompt": question,
+                })
+        if len(questions) >= 4:
+            break
+
+    if len(questions) < 4 and len(doc_names) >= 2:
         questions.append({
-            "id": "q-2",
-            "title": "What are the main requirements and dates?",
-            "prompt": f"Extract all important requirements, dates, deadlines, and milestone figures from the document."
+            "id": f"q-{len(questions) + 1}",
+            "title": "Which documents mention the same entities?",
+            "prompt": "Which uploaded documents mention the same people, organizations, dates, or identifiers?"
         })
 
-    questions.append({
-        "id": "q-3",
-        "title": "Extract all named entities and stakeholders",
-        "prompt": "Extract all individuals, organizations, stakeholders, and referenced entities from the uploaded documents."
-    })
+    if len(questions) < 4:
+        questions.append({
+            "id": f"q-{len(questions) + 1}",
+            "title": "What entities and dates are present?",
+            "prompt": "Extract the named entities, dates, IDs, and key terms present in the uploaded documents."
+        })
 
-    questions.append({
-        "id": "q-4",
-        "title": "Identify risks, exceptions, or liabilities",
-        "prompt": "Identify any risks, exceptions, policy conditions, or liabilities mentioned in the uploaded documents."
-    })
-
-    return questions
+    return questions[:4]
 
 
 @router.get("/api/logs")
@@ -725,15 +867,76 @@ def get_logs(lines: int = Query(60, ge=1, le=200)):
     }
 
 
+# ---------------------------------------------------------------------------
+# Settings & Support
+# ---------------------------------------------------------------------------
+
+@router.get("/api/settings")
+@router.get("/settings")
+def get_settings():
+    try:
+        return get_workspace_settings()
+    except Exception as exc:
+        raise _handle_db_exception(exc) from exc
+
+
+@router.patch("/api/settings")
+@router.patch("/settings")
+def patch_settings(payload: WorkspaceSettingsUpdate):
+    updates = payload.model_dump(exclude_unset=True)
+    if "email" in updates:
+        email = (updates.get("email") or "").strip()
+        if email and not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", email):
+            raise bad_request("Please enter a valid email address.", "invalid_email")
+        updates["email"] = email
+    try:
+        return update_workspace_settings(updates)
+    except Exception as exc:
+        raise _handle_db_exception(exc) from exc
+
+
+@router.get("/api/support/guides")
+@router.get("/support/guides")
+def get_support_guides():
+    try:
+        return list_support_guides()
+    except Exception as exc:
+        raise _handle_db_exception(exc) from exc
+
+
+@router.post("/api/support/tickets")
+@router.post("/support/tickets")
+def submit_support_ticket(payload: SupportTicketRequest):
+    subject = payload.subject.strip()
+    message = payload.message.strip()
+    category = payload.category.strip()
+    requester_email = (payload.requesterEmail or "").strip()
+    if not subject or not message:
+        raise bad_request("Please provide both a subject and an inquiry message.", "invalid_support_ticket")
+    if requester_email and not re.match(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$", requester_email):
+        raise bad_request("Please enter a valid requester email address.", "invalid_email")
+    try:
+        ticket = create_support_ticket({
+            "id": f"ticket-{uuid.uuid4().hex[:12]}",
+            "subject": subject,
+            "category": category,
+            "message": message,
+            "requester_email": requester_email,
+        })
+        return {"success": True, "ticket": ticket}
+    except Exception as exc:
+        raise _handle_db_exception(exc) from exc
+
+
 @router.get("/api/health")
 @router.get("/api/status")
 @router.get("/health")
 def get_health():
-    status = get_llm_status()
+    # Check database connectivity first
+    db_ok = True
+    db_detail = "ok"
     try:
         active_docs = list_all_documents(include_archived=False)
-        db_ok = True
-        db_detail = "ok"
         indexed_count = sum(1 for d in active_docs if d.get("status") == "indexed")
         total_count = len(active_docs)
     except Exception as exc:
@@ -742,8 +945,15 @@ def get_health():
         indexed_count = 0
         total_count = 0
 
+    # Check LLM status
+    status = get_llm_status()
+    gemini_ready = status.get("ready", False)
+
+    # Overall status: healthy only if both DB and LLM are available
+    overall_healthy = db_ok and gemini_ready
+
     return {
-        "status": "healthy" if db_ok else "degraded",
+        "status": "healthy" if overall_healthy else "degraded",
         "gemini": status,
         "database": {"status": db_detail},
         "indexed_documents_count": indexed_count,

@@ -7,7 +7,7 @@ export function UpdateEmailModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const trimmed = email.trim();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
@@ -15,8 +15,12 @@ export function UpdateEmailModal({ isOpen, onClose }) {
       addToast("Please enter a valid email address.", "error");
       return;
     }
-    updateUserSettings({ email: trimmed });
-    onClose();
+    try {
+      await updateUserSettings({ email: trimmed });
+      onClose();
+    } catch {
+      // Toast is emitted by updateUserSettings.
+    }
   };
 
   return (
@@ -70,7 +74,7 @@ export function DeleteWorkspaceModal({ isOpen, onClose }) {
       addToast('Please type "DELETE" to confirm.', 'error');
       return;
     }
-    addToast('Workspace deletion request queued. (Protected demo state)', 'info');
+    addToast('Workspace deletion is not enabled in this deployment. No backend deletion request was sent.', 'info');
     onClose();
   };
 

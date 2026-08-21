@@ -15,12 +15,14 @@ from backend.src.vectordb.vector_store import (
     query_vector_store,
 )
 from backend.src.vectordb.database import (
+    DuplicateContentError,
     get_db_connection,
     init_db,
     insert_document,
     update_document_status,
     get_document_by_id,
     get_document_by_name,
+    get_document_by_content_hash,
     list_all_documents,
     set_document_archived,
     delete_document_permanently,
@@ -32,6 +34,10 @@ from backend.src.vectordb.database import (
     delete_chat_session_permanently,
     insert_chat_message,
     get_session_messages,
+    get_workspace_settings,
+    update_workspace_settings,
+    list_support_guides,
+    create_support_ticket,
 )
 
 __all__ = [
@@ -53,6 +59,8 @@ __all__ = [
     "update_document_status",
     "get_document_by_id",
     "get_document_by_name",
+    "get_document_by_content_hash",
+    "DuplicateContentError",
     "list_all_documents",
     "set_document_archived",
     "delete_document_permanently",
@@ -64,4 +72,8 @@ __all__ = [
     "delete_chat_session_permanently",
     "insert_chat_message",
     "get_session_messages",
+    "get_workspace_settings",
+    "update_workspace_settings",
+    "list_support_guides",
+    "create_support_ticket",
 ]

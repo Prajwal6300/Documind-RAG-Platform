@@ -133,7 +133,7 @@ cd ..
 ## 💻 Running the Application
 
 > [!IMPORTANT]
-> **Single Correct Run Path**: DocuMind uses a decoupled architecture with a **FastAPI backend** on port `8000` and a **React + Vite frontend** on port `5173`. Do **NOT** run `python app.py` (the legacy prototype has been moved to `legacy/streamlit_app.py`).
+> **Single Correct Run Path**: DocuMind uses a decoupled architecture with a **FastAPI backend** on port `8000` and a **React + Vite frontend** on port `5173`. Run the backend with `uvicorn backend.main:app` and the frontend with `npm run dev --prefix frontend`.
 
 ### Option A: One-Command Startup (Recommended)
 **Windows PowerShell:**
@@ -238,7 +238,6 @@ Documind-RAG-Platform/
 │   │   ├── context/             # AppContext live state management
 │   │   ├── pages/               # InitialWorkspace, Chat, Library, Archive
 │   │   ├── components/          # EvidenceCard, CitationBadge, DebugPanel
-│   │   └── data/                # Initial state definitions
 │   ├── package.json
 │   ├── vite.config.js           # Vite build & proxy configuration
 │   └── vercel.json              # Vercel SPA routing
@@ -256,9 +255,6 @@ Documind-RAG-Platform/
 │   ├── test_accuracy.py         # 12-category accuracy test suite
 │   ├── test_multi.py            # Multi-document scoped test suite
 │   └── ...                      # Pipeline/retrieval/live-server test suites
-├── legacy/
-│   ├── app_streamlit_legacy.py  # Retired Streamlit prototype
-│   └── rag/                     # Retired ChromaDB-based RAG module (pre-migration)
 ├── SUPABASE_SETUP.md            # Supabase setup & verification guide
 ├── requirements.txt             # Production Python dependencies (psycopg, pgvector)
 ├── docker-compose.yml           # Production Docker Compose orchestration

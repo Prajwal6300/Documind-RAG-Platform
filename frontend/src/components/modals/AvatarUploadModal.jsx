@@ -59,14 +59,17 @@ export default function AvatarUploadModal() {
     setIsDragging(false);
   };
 
-  const handleSave = () => {
-    updateUserSettings({
-      avatarUrl: previewUrl,
-      avatarZoom: zoom,
-      avatarPos: position
-    });
-    addToast("Profile photo updated successfully.", "success");
-    handleClose();
+  const handleSave = async () => {
+    try {
+      await updateUserSettings({
+        avatarUrl: previewUrl,
+        avatarZoom: zoom,
+        avatarPos: position
+      });
+      handleClose();
+    } catch {
+      // Toast is emitted by updateUserSettings.
+    }
   };
 
   return (
@@ -116,7 +119,7 @@ export default function AvatarUploadModal() {
             {/* Image Container with live scaling & dragging */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <img
-                src={previewUrl}
+                src={previewUrl || '/DocuMind_Logo_4K.png'}
                 alt="Avatar preview"
                 className="w-full h-full object-cover transition-transform duration-75 select-none"
                 style={{

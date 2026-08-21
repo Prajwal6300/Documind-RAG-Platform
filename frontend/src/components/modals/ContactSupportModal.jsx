@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { api } from '../../api/client';
 
 export default function ContactSupportModal() {
   const { isSupportModalOpen, setIsSupportModalOpen, userSettings, addToast } = useApp();
@@ -16,7 +17,7 @@ export default function ContactSupportModal() {
     setMessage('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!subject.trim() || !message.trim()) {
       addToast("Please provide both a subject and an inquiry message.", "error");
@@ -24,11 +25,20 @@ export default function ContactSupportModal() {
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      addToast("Support ticket dispatched. A specialist will reply within 24 hours.", "success");
+    try {
+      const response = await api.submitSupportTicket({
+        subject: subject.trim(),
+        category,
+        message: message.trim(),
+        requesterEmail: userSettings.email || '',
+      });
+      addToast(`Support ticket saved: ${response.ticket?.id || 'created'}.`, "success");
       handleClose();
-    }, 600);
+    } catch (err) {
+      addToast(`Support ticket failed: ${err.message}`, "error");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

@@ -144,6 +144,53 @@ export const api = {
     return checkStatus(res, CHAT_TIMEOUT);
   },
 
+  async sendChatMessageStream(message, scope = 'All Documents', sessionId = null) {
+    const url = `${API_BASE_URL}/api/chat/stream?message=${encodeURIComponent(message)}&scope=${encodeURIComponent(scope || 'All Documents')}&session_id=${sessionId || ''}`;
+    const source = new EventSource(url, {
+      withCredentials: true,
+    });
+    return new Promise((resolve, reject) => {
+      let accumulatedText = '';
+      let accumulatedGroundedness = null;
+      let done = false;
+      let error = null;
+
+      source.onmessage = (event) => {
+        const data = event.data;
+        if (data.startsWith('data: ')) {
+          const parsed = JSON.parse(data.substring(6));
+          if (parsed.type === 'done') {
+            done = true;
+            source.close();
+            resolve({
+              text: accumulatedText,
+              groundedness: accumulatedGroundedness,
+              sessionId: sessionId,
+              done: true,
+            });
+          } else if (parsed.type === 'metadata') {
+            accumulatedGroundedness = parsed.groundedness;
+            // Render metadata after done arrives
+            // (handled by caller)
+          } else if (parsed.type === 'error') {
+            error = new Error(parsed.message || 'Streaming error');
+            source.close();
+            reject(error);
+          } else if (parsed.type === 'token') {
+            accumulatedText += parsed.token;
+            // Notify caller of new token
+            // (handled by caller via ontoken callback or state update)
+          }
+        }
+      };
+
+      source.onerror = (err) => {
+        source.close();
+        reject(new Error('SSE connection error') || 'Streaming connection failed');
+      };
+    });
+  },
+
   async getChatSessions() {
     const res = await fetchWithTimeout(`${API_BASE_URL}/api/chat/sessions`);
     return checkStatus(res);
@@ -175,6 +222,34 @@ export const api = {
 
   async getLogs(lines = 40) {
     const res = await fetchWithTimeout(`${API_BASE_URL}/api/logs?lines=${lines}`);
+    return checkStatus(res);
+  },
+
+  async getSettings() {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/settings`);
+    return checkStatus(res);
+  },
+
+  async updateSettings(updates) {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/settings`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    return checkStatus(res);
+  },
+
+  async getSupportGuides() {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/support/guides`);
+    return checkStatus(res);
+  },
+
+  async submitSupportTicket(ticket) {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/api/support/tickets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ticket),
+    });
     return checkStatus(res);
   },
 };

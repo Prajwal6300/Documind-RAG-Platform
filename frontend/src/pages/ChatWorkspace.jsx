@@ -48,10 +48,50 @@ export default function ChatWorkspace() {
     }, 2500);
   };
 
-  const handleSendFollowUp = (e) => {
+  const handleSendFollowUp = async (e) => {
     e?.preventDefault();
     if (!followUpText.trim()) return;
-    sendChatMessage(followUpText);
+    setIsAiThinking(true);
+    try {
+      const result = await api.sendChatMessageStream(followUpText);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: result.sessionId || Date.now().toString(),
+          sender: 'assistant',
+          intro: result.groundedness
+            ? (result.groundedness.confidence || 'Low')
+            : 'Low',
+          text: result.text,
+          sections: [],
+          sources: [],
+          evidences: [],
+          noContext: false,
+          groundedness: result.groundedness,
+          debug: {},
+          timestamp: new Date().toLocaleString(),
+        },
+      ]);
+    } catch (err) {
+      console.error('Stream error:', err);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: 'assistant',
+          text: 'Error: ' + (err.message || 'Unknown error'),
+          sections: [],
+          sources: [],
+          evidences: [],
+          noContext: true,
+          groundedness: { score: 0.0, confidence: 'Low', is_grounded: False },
+          debug: {},
+          timestamp: new Date().toLocaleString(),
+        },
+      ]);
+    } finally {
+      setIsAiThinking(false);
+    }
     setFollowUpText('');
   };
 

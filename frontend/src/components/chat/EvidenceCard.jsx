@@ -44,7 +44,19 @@ const EvidenceCard = forwardRef(function EvidenceCard(
               <span className="uppercase tracking-wider">PAGE:</span>
               <span className="font-semibold text-white">{evidence.page}</span>
             </span>
+            {evidence.docType && (
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-coral-accent">category</span>
+                <span className="uppercase tracking-wider">TYPE:</span>
+                <span className="font-semibold text-white capitalize">{evidence.docType.replaceAll('_', ' ')}</span>
+              </span>
+            )}
           </div>
+          {evidence.docSummary && (
+            <p className="text-xs text-[#EFE9DE] opacity-75 mb-4 leading-relaxed">
+              {evidence.docSummary}
+            </p>
+          )}
 
           <div className="text-body-md font-body-md text-canvas font-mono leading-relaxed pl-4 border-l-2 border-coral-accent bg-[#181715]/60 py-1">
             "{evidence.quote}"

@@ -4,11 +4,21 @@ import { useApp } from '../context/AppContext';
 
 export default function SupportPage() {
   const navigate = useNavigate();
-  const { setIsSupportModalOpen, addToast } = useApp();
+  const { setIsSupportModalOpen, addToast, supportGuides, isLoadingSupportGuides, serverError, retryConnection } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleGuideClick = (guideName) => {
-    addToast(`Opened "${guideName}" reference documentation.`, 'info');
+  const filteredGuides = supportGuides.filter((guide) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      guide.title.toLowerCase().includes(q) ||
+      guide.summary.toLowerCase().includes(q) ||
+      guide.category.toLowerCase().includes(q)
+    );
+  });
+
+  const handleGuideClick = (guide) => {
+    addToast(`Guide loaded from backend: "${guide.title}".`, 'info');
   };
 
   return (
@@ -52,92 +62,62 @@ export default function SupportPage() {
 
       {/* Featured Bento Grid */}
       <section className="mb-16">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter auto-rows-min">
-          {/* Getting Started (Large Card) */}
-          <div className="col-span-1 md:col-span-7 bg-card-surface rounded-2xl p-8 md:p-10 transition-all duration-300 hover:-translate-y-0.5 border border-outline-variant/20 hover:border-coral-accent/30 group relative overflow-hidden flex flex-col justify-between shadow-xs">
-            <div className="absolute right-0 bottom-0 opacity-5 pointer-events-none transform translate-x-1/4 translate-y-1/4">
-              <span className="material-symbols-outlined text-[200px]">rocket_launch</span>
-            </div>
-            <div className="relative z-10">
-              <div className="w-12 h-12 bg-canvas rounded-xl flex items-center justify-center mb-6 text-coral-accent border border-outline-variant/20 shadow-xs">
-                <span className="material-symbols-outlined">flag</span>
-              </div>
-              <h2 className="text-headline-lg font-headline-lg text-on-surface mb-3 font-semibold">
-                Getting Started
-              </h2>
-              <p className="text-body-md font-body-md text-muted-text mb-8 max-w-md">
-                Lay the foundation. Learn how to construct your premium workspace, index your first documents, and initiate semantic analysis.
-              </p>
-            </div>
+        {isLoadingSupportGuides ? (
+          <div className="p-12 text-center text-muted-text bg-card-surface/40 rounded-2xl border border-outline-variant/20">
+            <span className="material-symbols-outlined text-[36px] animate-spin inline-block mb-2 opacity-40">progress_activity</span>
+            <p className="text-sm">Loading support guides...</p>
+          </div>
+        ) : serverError ? (
+          <div className="p-12 text-center text-muted-text bg-card-surface/40 rounded-2xl border border-outline-variant/20">
+            <span className="material-symbols-outlined text-[40px] opacity-40 mb-2">cloud_off</span>
+            <p className="font-headline-md text-lg text-on-surface">Cannot load support guides</p>
+            <p className="text-sm mt-1">{serverError}</p>
             <button
-              onClick={() => handleGuideClick('Quickstart Guide')}
-              className="inline-flex items-center gap-2 text-coral-accent font-label-md text-sm font-semibold hover:text-primary transition-colors cursor-pointer w-fit"
+              onClick={retryConnection}
+              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-coral-accent text-white text-xs font-label-md hover:bg-primary transition-colors cursor-pointer"
             >
-              <span>Read the Quickstart Guide</span>
-              <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
-                arrow_forward
-              </span>
+              <span className="material-symbols-outlined text-[16px]">refresh</span>
+              Retry connection
             </button>
           </div>
-
-          {/* Search Tips (Tall Card) */}
-          <div className="col-span-1 md:col-span-5 bg-card-surface rounded-2xl p-8 md:p-10 transition-all duration-300 hover:-translate-y-0.5 border border-outline-variant/20 hover:border-coral-accent/30 group relative overflow-hidden flex flex-col justify-between shadow-xs">
-            <div>
-              <div className="w-12 h-12 bg-canvas rounded-xl flex items-center justify-center mb-6 text-coral-accent border border-outline-variant/20 shadow-xs">
-                <span className="material-symbols-outlined">manage_search</span>
-              </div>
-              <h2 className="text-headline-md font-headline-md text-on-surface mb-3 font-semibold">
-                Advanced Search Tips
-              </h2>
-              <ul className="text-body-md font-body-md text-muted-text space-y-3 mb-6 text-sm">
-                <li className="flex items-start gap-2.5">
-                  <span className="material-symbols-outlined text-[18px] text-coral-accent mt-0.5 shrink-0">check_circle</span>
-                  <span>Utilize boolean operators for precision.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="material-symbols-outlined text-[18px] text-coral-accent mt-0.5 shrink-0">check_circle</span>
-                  <span>Filter by document metadata and source dates.</span>
-                </li>
-                <li className="flex items-start gap-2.5">
-                  <span className="material-symbols-outlined text-[18px] text-coral-accent mt-0.5 shrink-0">check_circle</span>
-                  <span>Leverage semantic clustering for abstract concepts.</span>
-                </li>
-              </ul>
-            </div>
-            <button
-              onClick={() => handleGuideClick('Search Queries Masterclass')}
-              className="inline-flex items-center gap-2 text-coral-accent font-label-md text-sm font-semibold hover:text-primary transition-colors cursor-pointer w-fit"
-            >
-              <span>Master Search Queries</span>
-              <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
-                arrow_forward
-              </span>
-            </button>
+        ) : filteredGuides.length === 0 ? (
+          <div className="p-12 text-center text-muted-text bg-card-surface/40 rounded-2xl border border-outline-variant/20">
+            <span className="material-symbols-outlined text-[40px] opacity-40 mb-2">help</span>
+            <p className="font-headline-md text-lg text-on-surface">No matching guides</p>
+            <p className="text-sm mt-1">The backend returned no support guide records for this search.</p>
           </div>
-
-          {/* Managing Documents (Wide Card) */}
-          <div className="col-span-1 md:col-span-12 bg-card-surface rounded-2xl p-8 md:p-10 transition-all duration-300 hover:-translate-y-0.5 border-t-4 border-coral-accent/80 border border-outline-variant/20 group flex flex-col md:flex-row gap-8 items-start md:items-center justify-between shadow-xs">
-            <div className="max-w-2xl">
-              <div className="flex items-center gap-3.5 mb-3">
-                <div className="w-10 h-10 bg-canvas rounded-xl flex items-center justify-center text-coral-accent border border-outline-variant/20 shadow-xs">
-                  <span className="material-symbols-outlined">folder_managed</span>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-gutter auto-rows-min">
+            {filteredGuides.map((guide, index) => (
+              <div
+                key={guide.id}
+                className={`${index === 0 ? 'md:col-span-7' : index === 1 ? 'md:col-span-5' : 'md:col-span-12'} col-span-1 bg-card-surface rounded-2xl p-8 md:p-10 transition-all duration-300 hover:-translate-y-0.5 border border-outline-variant/20 hover:border-coral-accent/30 group relative overflow-hidden flex flex-col justify-between shadow-xs`}
+              >
+                <div>
+                  <div className="w-12 h-12 bg-canvas rounded-xl flex items-center justify-center mb-6 text-coral-accent border border-outline-variant/20 shadow-xs">
+                    <span className="material-symbols-outlined">{guide.icon || 'article'}</span>
+                  </div>
+                  <p className="text-label-sm text-muted-text uppercase tracking-wider mb-2">{guide.category}</p>
+                  <h2 className="text-headline-md font-headline-md text-on-surface mb-3 font-semibold">
+                    {guide.title}
+                  </h2>
+                  <p className="text-body-md font-body-md text-muted-text mb-8 max-w-2xl text-sm md:text-base">
+                    {guide.summary}
+                  </p>
                 </div>
-                <h2 className="text-headline-md font-headline-md text-on-surface font-semibold">
-                  Managing Documents
-                </h2>
+                <button
+                  onClick={() => handleGuideClick(guide)}
+                  className="inline-flex items-center gap-2 text-coral-accent font-label-md text-sm font-semibold hover:text-primary transition-colors cursor-pointer w-fit"
+                >
+                  <span>View Guide Record</span>
+                  <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
+                    arrow_forward
+                  </span>
+                </button>
               </div>
-              <p className="text-body-md font-body-md text-muted-text text-sm md:text-base">
-                Organize your academic or professional library. Discover best practices for archiving, tagging, and maintaining a high-signal repository for the AI to query.
-              </p>
-            </div>
-            <button
-              onClick={() => handleGuideClick('Library Protocols')}
-              className="shrink-0 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-outline-variant text-on-surface-variant text-label-md text-sm font-medium hover:bg-canvas hover:text-coral-accent hover:border-coral-accent/40 transition-all cursor-pointer"
-            >
-              <span>View Library Protocols</span>
-            </button>
+            ))}
           </div>
-        </div>
+        )}
       </section>
 
       {/* Contact Support Section */}

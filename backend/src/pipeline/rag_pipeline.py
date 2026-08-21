@@ -29,6 +29,7 @@ from backend.src.utils.config import (
     RELEVANCE_THRESHOLD,
     STRONG_RELEVANCE_THRESHOLD,
     RAG_DEBUG,
+    GROUNDEDNESS_THRESHOLD,
 )
 from backend.src.prompts.prompt_templates import (
     NO_CONTEXT_MESSAGE,
@@ -47,7 +48,7 @@ from backend.src.retrieval import (
     is_broad_question,
     resolve_follow_up,
 )
-from backend.src.llm import generate_answer, generate_answer_stream
+from backend.src.llm import generate_answer
 from backend.src.utils.logger import log_pipeline_event
 
 load_dotenv()
@@ -110,6 +111,7 @@ def _build_evidences_and_sources(final_results: list[dict]) -> tuple[list[dict],
     evidences = []
     sources = []
     seen_sources = set()
+    seen_evidence = set()
 
     for idx, r in enumerate(final_results):
         metadata = r.get("metadata") or {}
@@ -125,6 +127,10 @@ def _build_evidences_and_sources(final_results: list[dict]) -> tuple[list[dict],
 
         ev_id = f"ev-{idx + 1}"
         text_quote = r.get("text", "").strip()
+        evidence_key = (source, page, re.sub(r"\s+", " ", text_quote).lower())
+        if evidence_key in seen_evidence:
+            continue
+        seen_evidence.add(evidence_key)
         if len(text_quote) > 350:
             text_quote = text_quote[:347] + "..."
 
@@ -146,6 +152,20 @@ def _build_evidences_and_sources(final_results: list[dict]) -> tuple[list[dict],
             })
 
     return evidences, sources
+
+
+def _refusal_result(groundedness: dict | None = None, debug_payload: dict | None = None) -> dict:
+    """Return the single safe response shape used by every refusal path."""
+    return {
+        "answer": NO_CONTEXT_MESSAGE,
+        "intro": NO_CONTEXT_MESSAGE,
+        "sections": [],
+        "sources": [],
+        "evidences": [],
+        "no_context": True,
+        "groundedness": groundedness or {"score": 0.0, "confidence": "Low", "is_grounded": False},
+        "debug": debug_payload,
+    }
 
 
 def _parse_answer_structure(raw_text: str, evidences: list[dict], sources: list[dict]) -> dict:
@@ -430,6 +450,24 @@ def answer_question(
         "latency_ms": latency_ms,
     }
 
+    # This is deliberately independent of the earlier sufficiency check.  A
+    # plausible-looking model answer must never escape if it is weakly grounded.
+    if (
+        groundedness["score"] < GROUNDEDNESS_THRESHOLD
+        or not groundedness.get("is_grounded", False)
+    ):
+        log_pipeline_event("refusal", {
+            "query": question,
+            "reason": "groundedness_below_threshold",
+            "groundedness_score": groundedness["score"],
+            "groundedness_threshold": GROUNDEDNESS_THRESHOLD,
+        })
+        debug_payload["refusal_reason"] = "groundedness_below_threshold"
+        return _refusal_result(
+            groundedness={**groundedness, "confidence": "Low", "is_grounded": False},
+            debug_payload=debug_payload,
+        )
+
     return {
         "answer": raw_answer,
         "intro": structured["intro"],
@@ -449,7 +487,35 @@ def answer_question_stream(
 ) -> Generator[dict, None, None]:
     """
     Generator yielding token chunks and final metadata via Server-Sent Events (SSE).
+
+    A response is fully validated by the same hard groundedness gate as the
+    JSON endpoint before any answer text is sent.  This avoids leaking an
+    ungrounded partial answer that a later metadata event would try to retract.
     """
+    result = answer_question(
+        question=question,
+        document_id=document_id,
+        chat_history=chat_history,
+    )
+
+    answer = result.get("answer") or NO_CONTEXT_MESSAGE
+    # Small transport chunks keep the SSE client responsive while ensuring that
+    # every visible token belongs to a response that already passed validation.
+    for token in re.findall(r"\S+\s*", answer):
+        yield {"type": "token", "token": token}
+
+    yield {
+        "type": "metadata",
+        "intro": result.get("intro") or answer,
+        "sections": result.get("sections") or [],
+        "sources": result.get("sources") or [],
+        "evidences": result.get("evidences") or [],
+        "no_context": bool(result.get("no_context", False)),
+        "groundedness": result.get("groundedness") or {"score": 0.0, "confidence": "Low", "is_grounded": False},
+    }
+    yield {"type": "done", "no_context": bool(result.get("no_context", False))}
+    return
+
     question = (question or "").strip()
     if not question:
         yield {"type": "token", "token": "Please ask a question."}
@@ -516,6 +582,38 @@ def answer_question_stream(
     full_answer = "".join(full_text_acc)
     structured = _parse_answer_structure(full_answer, evidences, sources)
     groundedness = calculate_groundedness_score(full_answer, reranked, no_context=False)
+
+    # HARD GROUNDEDNESS THRESHOLD — unconditional refusal for streaming too
+    groundedness_below_threshold = groundedness["score"] < GROUNDEDNESS_THRESHOLD
+    is_refusal_answer = any(
+        p in full_answer.lower()
+        for p in [
+            NO_CONTEXT_MESSAGE.lower(),
+            "couldn't find that information",
+            "could not find that information",
+            "not mentioned in the provided",
+            "not mentioned in the uploaded",
+            "not found in your uploaded",
+            "not found in the provided",
+            "no information provided in the uploaded",
+        ]
+    )
+
+    if groundedness_below_threshold or not groundedness.get("is_grounded", False) or is_refusal_answer:
+        refusal_message = LOW_CONTENT_NO_ANSWER_MESSAGE if target_doc and target_doc.get("is_low_text") else NO_CONTEXT_MESSAGE
+        yield {
+            "type": "metadata",
+            "intro": refusal_message,
+            "sections": [],
+            "sources": [],
+            "evidences": [],
+            "no_context": True,
+            "groundedness": {"score": groundedness["score"], "confidence": "Low", "is_grounded": False},
+        }
+        yield {"type": "done"}
+        return
+
+    structured = _parse_answer_structure(full_answer, evidences, sources)
 
     yield {
         "type": "metadata",

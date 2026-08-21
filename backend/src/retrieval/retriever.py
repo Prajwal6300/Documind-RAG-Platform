@@ -35,6 +35,7 @@ from backend.src.vectordb.vector_store import (
     list_documents,
     query_vector_store,
 )
+from backend.src.vectordb.database import list_all_documents, get_document_by_id
 from backend.src.embeddings.embedder import embed_query
 from backend.src.utils.logger import logger
 from backend.src.retrieval.lexical_search import (
@@ -79,6 +80,57 @@ def _source_match(query_tokens: list[str], metadata: dict) -> float:
             return 1.0
 
     return 0.0
+
+
+def _flatten_analysis_terms(doc: dict) -> str:
+    parts = [
+        doc.get("name") or "",
+        doc.get("title") or "",
+        doc.get("doc_summary") or "",
+        doc.get("doc_category") or "",
+    ]
+    for entity in doc.get("entities") or []:
+        if isinstance(entity, dict):
+            parts.append(str(entity.get("value") or ""))
+            parts.append(str(entity.get("type") or ""))
+        else:
+            parts.append(str(entity))
+    for section in doc.get("structure") or []:
+        if isinstance(section, dict):
+            parts.append(str(section.get("heading") or ""))
+            parts.append(str(section.get("description") or ""))
+        else:
+            parts.append(str(section))
+    return " ".join(parts).lower()
+
+
+def _document_analysis_scores(query: str, query_tokens: list[str], entities: list[tuple[str, str]]) -> dict[str, float]:
+    """Score query/document metadata affinity to reduce wrong-document retrieval."""
+    try:
+        docs = list_all_documents(include_archived=False)
+    except Exception:
+        return {}
+
+    entity_values = [v.lower() for _t, v in (entities or []) if v]
+    scores = {}
+    for doc in docs:
+        if doc.get("status") != "indexed":
+            continue
+        haystack = _flatten_analysis_terms(doc)
+        if not haystack:
+            continue
+        token_hits = sum(1 for token in query_tokens if len(token) > 2 and token.lower() in haystack)
+        token_score = min(0.60, token_hits / max(4, len(query_tokens)))
+        entity_hits = sum(1 for value in entity_values if value and value in haystack)
+        entity_score = min(0.80, entity_hits * 0.35)
+        category_score = 0.0
+        category = (doc.get("doc_category") or "").replace("_", " ")
+        if category and category in query.lower():
+            category_score = 0.25
+        score = max(token_score, entity_score, category_score)
+        if score > 0:
+            scores[doc["id"]] = score
+    return scores
 
 
 def _hybrid_score(distance: float | None, lexical_score: float, exact_boost: float, source_match_ratio: float) -> float:
@@ -141,6 +193,16 @@ def _lexical_candidates(
     return candidates[:top_k]
 
 
+import hashlib
+import re
+
+
+def _content_fingerprint(text: str) -> str:
+    """Generate normalized fingerprint for text deduplication."""
+    norm = re.sub(r"\s+", " ", (text or "")).strip().lower()
+    return hashlib.sha256(norm.encode("utf-8")).hexdigest()[:16]
+
+
 def _retrieve_candidates(
     query: str,
     expanded_queries: list[str] | None = None,
@@ -154,6 +216,7 @@ def _retrieve_candidates(
         top_k = RETRIEVAL_CANDIDATES
 
     candidates = {}
+    fingerprint_to_key = {}
 
     def _merge(chunks):
         for chunk in chunks:
@@ -161,10 +224,15 @@ def _retrieve_candidates(
             if not chunk_id:
                 continue
 
-            if chunk_id not in candidates:
-                candidates[chunk_id] = chunk
+            fp = _content_fingerprint(chunk.get("text", ""))
+            # Check if this exact text content is already represented under another chunk ID
+            target_id = fingerprint_to_key.get(fp, chunk_id)
+
+            if target_id not in candidates:
+                candidates[target_id] = chunk
+                fingerprint_to_key[fp] = target_id
             else:
-                existing = candidates[chunk_id]
+                existing = candidates[target_id]
                 # Keep the best (lowest) distance
                 if (
                     chunk.get("distance") is not None
@@ -230,28 +298,28 @@ def _select_final_with_diversity(results: list[dict], final_k: int) -> list[dict
     selected = []
     seen_chunk_ids = set()
     seen_sources = set()
-    seen_texts = set()
+    seen_fingerprints = set()
 
     # Pass 1: Top chunk from each distinct document source
     for chunk in sorted_results:
         src = (chunk.get("metadata") or {}).get("source") or (chunk.get("metadata") or {}).get("document_id")
-        txt = (chunk.get("text") or "").strip()
-        if src and src not in seen_sources and txt not in seen_texts:
+        fp = _content_fingerprint(chunk.get("text", ""))
+        if src and src not in seen_sources and fp not in seen_fingerprints:
             selected.append(chunk)
             seen_chunk_ids.add(chunk["chunk_id"])
             seen_sources.add(src)
-            seen_texts.add(txt)
+            seen_fingerprints.add(fp)
             if len(selected) >= final_k:
                 break
 
     # Pass 2: Fill remaining budget with highest scoring chunks overall
     if len(selected) < final_k:
         for chunk in sorted_results:
-            txt = (chunk.get("text") or "").strip()
-            if chunk["chunk_id"] not in seen_chunk_ids and txt not in seen_texts:
+            fp = _content_fingerprint(chunk.get("text", ""))
+            if chunk["chunk_id"] not in seen_chunk_ids and fp not in seen_fingerprints:
                 selected.append(chunk)
                 seen_chunk_ids.add(chunk["chunk_id"])
-                seen_texts.add(txt)
+                seen_fingerprints.add(fp)
                 if len(selected) >= final_k:
                     break
 
@@ -345,6 +413,7 @@ def retrieve(
         for kw in query_keywords:
             query_tokens.extend(tokenize_meaningful(kw))
     query_tokens = list(dict.fromkeys(query_tokens))
+    doc_analysis_scores = {} if document_id else _document_analysis_scores(query, query_tokens, entities)
 
     scored = []
     for chunk in candidates:
@@ -360,6 +429,10 @@ def retrieve(
             exact_boost = calculate_exact_match_boost(query, entities, text)
 
         source_match = _source_match(query_tokens, metadata)
+        doc_analysis_boost = 0.0
+        chunk_doc_id = metadata.get("document_id")
+        if chunk_doc_id and chunk_doc_id in doc_analysis_scores:
+            doc_analysis_boost = doc_analysis_scores[chunk_doc_id]
         distance = chunk.get("distance")
 
         lex_score = chunk.get("lexical_score")
@@ -379,10 +452,12 @@ def retrieve(
                 relevant = True
 
         combined_score = _hybrid_score(distance, lex_score, exact_boost, source_match)
+        combined_score = min(1.0, combined_score + (0.18 * doc_analysis_boost))
 
         chunk["keyword_ratio"] = kw_ratio
         chunk["exact_boost"] = exact_boost
         chunk["source_match"] = source_match
+        chunk["doc_analysis_boost"] = doc_analysis_boost
         chunk["lexical_score"] = lex_score
         chunk["_score"] = combined_score
         chunk["relevant"] = relevant

@@ -1,17 +1,17 @@
-"""Cross-Encoder Re-Ranking and Groundedness Evaluation Engine for DocuMind.
-
-Architecture:
-1. Re-ranks top candidate chunks retrieved from hybrid vector + BM25 search.
-2. Uses sentence-transformers CrossEncoder (ms-marco-MiniLM-L-6-v2) or hybrid fallback.
-3. Computes per-answer groundedness and retrieval confidence scores [0.0 - 1.0].
-"""
-
+import hashlib
 import math
-from backend.src.utils.config import ENABLE_RERANKER, RERANKER_MODEL
+import re
+from backend.src.utils.config import ENABLE_RERANKER, RERANKER_MODEL, GROUNDEDNESS_THRESHOLD
 from backend.src.utils.logger import logger
 
 _cross_encoder = None
 _model_failed = False
+
+
+def _content_fingerprint(text: str) -> str:
+    """Generate normalized fingerprint for text deduplication."""
+    norm = re.sub(r"\s+", " ", (text or "")).strip().lower()
+    return hashlib.sha256(norm.encode("utf-8")).hexdigest()[:16]
 
 
 def _get_cross_encoder():
@@ -42,11 +42,22 @@ def _sigmoid(x: float) -> float:
 def rerank_chunks(query: str, chunks: list[dict], top_n: int = 6) -> list[dict]:
     """
     Re-rank candidate chunks using CrossEncoder.
+    Deduplicates candidates by text content fingerprint to prevent duplicate citations.
     If CrossEncoder is unavailable, sorts by existing hybrid `_score`.
     """
     if not chunks:
         return []
 
+    # Deduplicate candidates by text fingerprint preserving the highest existing score
+    deduped_chunks = []
+    seen_fingerprints = set()
+    for chunk in chunks:
+        fp = _content_fingerprint(chunk.get("text", ""))
+        if fp not in seen_fingerprints:
+            seen_fingerprints.add(fp)
+            deduped_chunks.append(chunk)
+
+    chunks = deduped_chunks
     model = _get_cross_encoder()
 
     if model is not None and len(chunks) > 1:
@@ -89,12 +100,37 @@ def calculate_groundedness_score(
     2. N-gram / term overlap between generated claims and context
     3. Explicit refusal detection
     """
-    if no_context or not context_chunks or not answer.strip():
+    if no_context or not context_chunks or not answer or not answer.strip():
         return {
             "score": 0.0,
             "confidence": "Low",
             "is_grounded": False,
             "relevance_level": "None",
+            "term_overlap": 0.0,
+            "avg_retrieval": 0.0,
+        }
+
+    # Explicit refusal detection
+    clean_ans = answer.lower()
+    refusal_patterns = [
+        "couldn't find that information",
+        "could not find that information",
+        "not mentioned in the provided",
+        "not mentioned in the uploaded",
+        "not found in your uploaded",
+        "not found in the provided",
+        "no information provided in the uploaded",
+        "does not contain information",
+        "cannot answer based on the provided",
+    ]
+    if any(p in clean_ans for p in refusal_patterns):
+        return {
+            "score": 0.0,
+            "confidence": "Low",
+            "is_grounded": False,
+            "relevance_level": "Refusal",
+            "term_overlap": 0.0,
+            "avg_retrieval": 0.0,
         }
 
     # Factor 1: Retrieval strength (average score of top 3 context chunks)
@@ -112,12 +148,19 @@ def calculate_groundedness_score(
         term_overlap = 0.8
 
     # Factor 3: Combined groundedness score
-    groundedness = 0.50 * avg_retrieval + 0.50 * term_overlap
+    # If retrieval relevance is weak (< 0.25), penalize groundedness to prevent hallucination acceptance
+    if avg_retrieval < 0.25:
+        groundedness = min(0.50 * avg_retrieval + 0.50 * term_overlap, avg_retrieval * 1.5)
+    else:
+        groundedness = 0.50 * avg_retrieval + 0.50 * term_overlap
+
     groundedness = max(0.0, min(1.0, groundedness))
 
-    if groundedness >= 0.75:
+    is_grounded = (groundedness >= GROUNDEDNESS_THRESHOLD) and (avg_retrieval >= 0.20)
+
+    if groundedness >= 0.70:
         confidence = "High"
-    elif groundedness >= 0.50:
+    elif groundedness >= 0.45:
         confidence = "Medium"
     else:
         confidence = "Low"
@@ -125,7 +168,7 @@ def calculate_groundedness_score(
     return {
         "score": round(groundedness, 3),
         "confidence": confidence,
-        "is_grounded": groundedness >= 0.45,
+        "is_grounded": is_grounded,
         "term_overlap": round(term_overlap, 3),
         "avg_retrieval": round(avg_retrieval, 3),
     }

@@ -10,7 +10,7 @@ export default function CitationBadge({ citation, onCitationClick }) {
         className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-surface-container-highest 
                    text-label-sm font-label-sm text-secondary cursor-pointer 
                    hover:bg-coral-accent hover:text-white transition-colors duration-150 shadow-2xs"
-        title={`Click to view cited evidence from ${citation.docName}`}
+        title={`${citation.docName}${citation.docType ? ` · ${citation.docType.replaceAll('_', ' ')}` : ''}${citation.docSummary ? ` · ${citation.docSummary}` : ''}`}
         aria-label={`View evidence from ${citation.docName} page ${citation.page}`}
       >
         <span className="material-symbols-outlined text-[14px]">find_in_page</span>

@@ -10,6 +10,7 @@ export function AppProvider({ children }) {
   const [recentAnalyses, setRecentAnalyses] = useState([]);
   const [chatMessages, setChatMessages] = useState([]);
   const [suggestedQuestions, setSuggestedQuestions] = useState([]);
+  const [supportGuides, setSupportGuides] = useState([]);
   const [currentSessionId, setCurrentSessionId] = useState(null);
   const [selectedScope, setSelectedScope] = useState('All Documents');
 
@@ -17,6 +18,8 @@ export function AppProvider({ children }) {
   const [isLoadingDocs, setIsLoadingDocs] = useState(true);
   const [isLoadingArchive, setIsLoadingArchive] = useState(true);
   const [isLoadingRecent, setIsLoadingRecent] = useState(true);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const [isLoadingSupportGuides, setIsLoadingSupportGuides] = useState(true);
 
   // True when the backend is unreachable so pages can show a clear
   // "can't connect to server" state instead of a silent failure.
@@ -24,14 +27,14 @@ export function AppProvider({ children }) {
 
   // User Profile & Settings State
   const [userSettings, setUserSettings] = useState({
-    name: "Enterprise Scholar",
-    email: "analyst@documind.io",
-    role: "Lead Document Architect",
-    avatarUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuB1gOVA50bVGyZsmIs4PmAlqhe6Pr3jUSfKKhffffyJQv8KWlRad7I3SMR7p_0K-TI1M9bWJ4KZkNUJE2IQ5l33brWjL7umUbcxalw7Ponu_cYOA17myytdIiVliPvOy9sCrqKKukzJ8lAQA4tPl7ulAcAd0DJNifK3JxGEKLQPHTlmLUyomvBMXo87idne5YvLChyoSARtL9zv6CFh-4ACSO6_tFz-LGvMxc3nRT-A7-L_8GyK9Tj49g",
+    name: "Local Workspace",
+    email: "",
+    role: "Workspace User",
+    avatarUrl: "",
     avatarZoom: 110,
     avatarPos: { x: 0, y: 0 },
-    plan: "Gemini RAG Enterprise",
-    nextBilling: "Active",
+    plan: "Self-hosted",
+    nextBilling: "Not applicable",
     notifications: {
       documentSummaries: true,
       productUpdates: false,
@@ -117,6 +120,34 @@ export function AppProvider({ children }) {
     }
   }, [addToast]);
 
+  const fetchSettings = useCallback(async () => {
+    setIsLoadingSettings(true);
+    try {
+      const data = await api.getSettings();
+      setUserSettings(data);
+      setServerError(null);
+    } catch (err) {
+      setServerError(err.message);
+      addToast(`Couldn't load settings: ${err.message}`, 'error');
+    } finally {
+      setIsLoadingSettings(false);
+    }
+  }, [addToast]);
+
+  const fetchSupportGuides = useCallback(async () => {
+    setIsLoadingSupportGuides(true);
+    try {
+      const data = await api.getSupportGuides();
+      setSupportGuides(data);
+      setServerError(null);
+    } catch (err) {
+      setServerError(err.message);
+      addToast(`Couldn't load support guides: ${err.message}`, 'error');
+    } finally {
+      setIsLoadingSupportGuides(false);
+    }
+  }, [addToast]);
+
   const retryConnection = useCallback(() => {
     setServerError(null);
     setIsLoadingDocs(true);
@@ -126,7 +157,9 @@ export function AppProvider({ children }) {
     fetchRecentAnalyses();
     fetchArchive();
     fetchSuggestedQuestions();
-  }, [fetchDocuments, fetchRecentAnalyses, fetchArchive, fetchSuggestedQuestions]);
+    fetchSettings();
+    fetchSupportGuides();
+  }, [fetchDocuments, fetchRecentAnalyses, fetchArchive, fetchSuggestedQuestions, fetchSettings, fetchSupportGuides]);
 
   // Initial load
   useEffect(() => {
@@ -134,7 +167,9 @@ export function AppProvider({ children }) {
     fetchRecentAnalyses();
     fetchArchive();
     fetchSuggestedQuestions();
-  }, [fetchDocuments, fetchRecentAnalyses, fetchArchive, fetchSuggestedQuestions]);
+    fetchSettings();
+    fetchSupportGuides();
+  }, [fetchDocuments, fetchRecentAnalyses, fetchArchive, fetchSuggestedQuestions, fetchSettings, fetchSupportGuides]);
 
   // Real-time polling for documents currently in "Processing" state
   useEffect(() => {
@@ -186,6 +221,10 @@ export function AppProvider({ children }) {
     try {
       const newDoc = await api.uploadDocument(file, title);
       setDocuments((prev) => [newDoc, ...prev.filter((d) => d.id !== newDoc.id)]);
+      // A just-uploaded document is the user's most likely intended context.
+      // Keep its scope selected so a follow-up cannot silently retrieve from an
+      // unrelated older document while indexing finishes.
+      setSelectedScope(newDoc.name);
       fetchSuggestedQuestions();
     } catch (err) {
       addToast(`Upload failed: ${err.message}`, 'error');
@@ -325,31 +364,32 @@ export function AppProvider({ children }) {
   // Settings
   // -------------------------------------------------------------------------
 
-  const updateUserSettings = (updates) => {
-    setUserSettings((prev) => ({ ...prev, ...updates }));
-    addToast('Settings updated successfully.', 'success');
+  const updateUserSettings = async (updates) => {
+    try {
+      const updated = await api.updateSettings(updates);
+      setUserSettings(updated);
+      addToast('Settings saved.', 'success');
+      return updated;
+    } catch (err) {
+      addToast(`Failed to save settings: ${err.message}`, 'error');
+      throw err;
+    }
   };
 
-  const toggleNotification = (key) => {
-    setUserSettings((prev) => ({
-      ...prev,
-      notifications: {
-        ...prev.notifications,
-        [key]: !prev.notifications[key]
-      }
-    }));
-    addToast('Updated notification preference.', 'info');
+  const toggleNotification = async (key) => {
+    const notifications = {
+      ...userSettings.notifications,
+      [key]: !userSettings.notifications?.[key]
+    };
+    await updateUserSettings({ notifications });
   };
 
-  const togglePrivacy = (key) => {
-    setUserSettings((prev) => ({
-      ...prev,
-      privacy: {
-        ...prev.privacy,
-        [key]: !prev.privacy[key]
-      }
-    }));
-    addToast('Updated privacy preference.', 'info');
+  const togglePrivacy = async (key) => {
+    const privacy = {
+      ...userSettings.privacy,
+      [key]: !userSettings.privacy?.[key]
+    };
+    await updateUserSettings({ privacy });
   };
 
   return (
@@ -361,10 +401,13 @@ export function AppProvider({ children }) {
         recentAnalyses,
         chatMessages,
         suggestedQuestions,
+        supportGuides,
         currentSessionId,
         selectedScope,
         setSelectedScope,
         isAiThinking,
+        isLoadingSettings,
+        isLoadingSupportGuides,
         serverError,
         retryConnection,
         userSettings,
@@ -380,6 +423,8 @@ export function AppProvider({ children }) {
         addToast,
         removeToast,
         fetchDocuments,
+        fetchSettings,
+        fetchSupportGuides,
         restoreArchivedItem,
         deleteArchivedItem,
         deleteDocument,

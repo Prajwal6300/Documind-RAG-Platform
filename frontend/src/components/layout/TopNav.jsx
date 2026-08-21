@@ -15,6 +15,7 @@ export default function TopNav({ showBackButton = true }) {
 
   const [health, setHealth] = useState(null);
   const [healthChecking, setHealthChecking] = useState(false);
+  const indexedCount = documents.filter((doc) => doc.status === 'Indexed').length;
 
   const checkHealth = async () => {
     setHealthChecking(true);
@@ -82,7 +83,7 @@ export default function TopNav({ showBackButton = true }) {
             alt="DocuMind"
             className="w-7 h-7 object-contain"
             onError={(e) => {
-              e.target.src = "https://lh3.googleusercontent.com/aida-public/AB6AXuAuiu6wa71gz2vKPDp45wCy7ewP3vEEQVWK1bJdeKyKQVs5B_IAu0Gc9fP5NNpUX-tM-udr-wtKbLJ1S49rjLE9yCIMIAYjS0N6oiau9RTck46ymwPXXDoPETKVRRvr8ivE90pKmqjrvOp0bl-x4oJRK6gQAAqqygDrQTL67-tjp-inMrHzApNQvbO0qdfWkMRUFN-4iUGqELjbwDxOlFZsPbHx0yfOJGaPjjVxYM5cDFl5V_wvAgIKsYtJSF9aqyyBYok";
+              e.currentTarget.style.display = 'none';
             }}
           />
           <span className="font-headline-md text-lg font-bold text-on-surface">DocuMind</span>
@@ -122,7 +123,7 @@ export default function TopNav({ showBackButton = true }) {
           title="View all files in Library"
         >
           <span className="material-symbols-outlined text-[18px]">folder_open</span>
-          <span>{documents.length} Files Indexed</span>
+          <span>{indexedCount} Files Indexed</span>
         </button>
 
         {/* Profile Avatar Button (Navigates to Settings) */}
@@ -135,7 +136,7 @@ export default function TopNav({ showBackButton = true }) {
           aria-label="View account settings"
         >
           <img
-            src={userSettings.avatarUrl}
+            src={userSettings.avatarUrl || '/DocuMind_Logo_4K.png'}
             alt={userSettings.name}
             className="w-full h-full object-cover"
             style={{

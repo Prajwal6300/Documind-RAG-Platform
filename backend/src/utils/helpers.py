@@ -58,4 +58,13 @@ def format_doc_response(doc: dict) -> dict:
         "status": status_display,
         "icon": icon,
         "accentColor": color,
+        "is_low_text": bool(doc.get("is_low_text")),
+        "warning": doc.get("warning_message") or "",
+        "documentSummary": doc.get("doc_summary") or "",
+        "documentType": doc.get("doc_category") or "",
+        "entities": doc.get("entities") or [],
+        "structure": doc.get("structure") or [],
+        "suggestedQuestions": doc.get("suggested_questions") or [],
+        "analysisStatus": doc.get("analysis_status") or "pending",
+        "analysisWarnings": doc.get("analysis_warnings") or [],
     }
