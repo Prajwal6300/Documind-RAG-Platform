@@ -72,12 +72,9 @@ python -c "import psycopg, os, dotenv; dotenv.load_dotenv(); conn = psycopg.conn
 
 ---
 
-## 7. Running Evaluation and Verification
+## 7. Running Verification Tests
 
 ```bash
-# Run End-to-End FastAPI Verification
-python tests/test_e2e_verification.py
-                                
-# Run 35-Query Evaluation Benchmark
-python scripts/eval.py
+# Run 7 Grounding Guardrail Safety Tests
+python -m pytest tests/test_grounding_guardrails.py
 ```

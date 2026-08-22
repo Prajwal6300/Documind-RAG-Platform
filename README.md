@@ -5,9 +5,20 @@
 [![Google Gemini](https://img.shields.io/badge/LLM-Google%20Gemini%20Flash-4285F4?logo=google&logoColor=white)](https://ai.google.dev)
 [![Supabase](https://img.shields.io/badge/Database-Supabase%20(Postgres%20%2B%20pgvector)-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
 [![Cross-Encoder](https://img.shields.io/badge/Re--Ranker-ms--marco--MiniLM--L6--v2-FFA116)](https://huggingface.co/cross-encoder/ms-marco-MiniLM-L-6-v2)
+[![Vercel](https://img.shields.io/badge/Frontend%20Deployment-Vercel-black?logo=vercel&logoColor=white)](https://documind-rag-platform.vercel.app)
+[![Render](https://img.shields.io/badge/Backend%20Deployment-Render-46E3B7?logo=render&logoColor=white)](https://documind-rag-platform.onrender.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**DocuMind** is a production-ready, strictly grounded Retrieval-Augmented Generation (RAG) platform that enables enterprise teams to index multi-format documents (PDF, DOCX, XLSX, TXT, PPTX) and query them through a natural-language conversational workspace. Engineered with zero simulated data, DocuMind pairs dense Gemini semantic embeddings stored in **Supabase PostgreSQL with pgvector**, sparse BM25 lexical search, a local neural Cross-Encoder re-ranker (`ms-marco-MiniLM-L-6-v2`), an anti-hallucination sufficiency gate, and an automated citation mapper that links every factual claim to verbatim chunk evidence.
+**DocuMind** is a production-ready, strictly grounded Retrieval-Augmented Generation (RAG) platform that enables enterprise teams to index multi-format documents (PDF, DOCX, XLSX, TXT, PPTX) and query them through a natural-language conversational workspace. DocuMind pairs dense Gemini semantic embeddings stored in **Supabase PostgreSQL with pgvector**, sparse BM25 lexical search, a local neural Cross-Encoder re-ranker (`ms-marco-MiniLM-L-6-v2`), an anti-hallucination sufficiency gate, and an automated citation mapper that links every factual claim to verbatim chunk evidence.
+
+---
+
+## 🌐 Live Production Deployments
+
+* **Live Frontend (Vercel)**: [https://documind-rag-platform.vercel.app](https://documind-rag-platform.vercel.app)
+* **Live Backend API (Render)**: [https://documind-rag-platform.onrender.com](https://documind-rag-platform.onrender.com)
+* **Backend Health Check**: [https://documind-rag-platform.onrender.com/api/health](https://documind-rag-platform.onrender.com/api/health)
+* **Interactive OpenAPI Swagger Docs**: [https://documind-rag-platform.onrender.com/docs](https://documind-rag-platform.onrender.com/docs)
 
 ---
 
@@ -24,10 +35,10 @@ graph TD
     end
 
     subgraph Retrieval ["2. Multi-Stage Hybrid Retrieval & Re-Ranking"]
-        Q["User Query"] --> QR["Conversational Query Rewriter"]
-        QR --> H1["Semantic Vector Search (pgvector cosine <=> HNSW)"]
-        QR --> H2["Lexical BM25 Search + Exact Match Boosting"]
-        H1 & H2 --> M["Merged & Deduplicated Top-16 Candidates"]
+        Q["User Query (Typos / Slang / Vague Scope)"] --> QN["Fast Query Normalizer (< 0.2ms) & Vague Scope Resolver"]
+        QN --> H1["Semantic Vector Search (pgvector cosine <=> HNSW)"]
+        QN --> H2["Lexical BM25 Search + Exact Match Boosting"]
+        H1 & H2 --> M["Merged & Deduplicated Top-14 Candidates (Parallel ThreadPool)"]
         M --> RR["Neural Cross-Encoder Re-Ranker (ms-marco-MiniLM-L-6-v2)"]
         RR --> SG{"Anti-Hallucination Sufficiency Gate"}      
     end
@@ -37,27 +48,25 @@ graph TD
         SG -- "Sufficient Evidence" --> LLM["Google Gemini Generation (Strict Document-Bound Prompt)"]
         LLM --> CIT["Structured Section Parsing & Citation Linking"]
         CIT --> UI["Live React Chat UI with Evidence Cards & Telemetry Drawer"]
-        CIT --> LOGS[("Structured Observability Logs (data/logs/documind.log)")]
+        CIT --> LOGS[("Structured Observability Logs")]
     end
 ```
 
 ---
 
-## 📊 Benchmark Evaluation Report
+## 📊 Safety Guardrails & Deterministic Verification
 
-DocuMind includes an automated evaluation harness (`scripts/eval.py`) executed against a verified 35-query benchmark dataset (`scripts/eval_dataset.json`) containing factual QA, document summaries, multi-file synthesis, and out-of-domain unanswerable queries.
+DocuMind includes deterministic safety guardrails executed in `tests/test_grounding_guardrails.py` to prevent hallucination, citation fabrication, and out-of-domain answering:
 
-### Evaluation Results
-
-| Metric | Target | Result | Status |
+| Guardrail Test Case | Focus | Result | Status |
 |---|---|---|---|
-| **Overall Accuracy** | ≥ 90.0% | **97.1%** | 🟢 PASS |
-| **Retrieval Precision@k** | ≥ 90.0% | **100.0%** | 🟢 PASS |
-| **Refusal Accuracy (Zero Hallucination)** | 100.0% | **100.0%** | 🟢 PASS |
-| **Answer Correctness (Entity & Keyword Match)** | ≥ 90.0% | **95.2%** | 🟢 PASS |
-| **Average End-to-End Latency** | < 3000 ms | **1,840 ms** | 🟢 PASS |
-
-> **Evaluation Methodology**: The benchmark tests answerable queries against exact keywords and source citations, while out-of-domain queries (e.g. quantum physics, dress codes not in documents, unmentioned figures) are evaluated for strict refusal (*"I couldn't find that information in the uploaded documents."*).
+| **Single-Source Real Citation** | Ensures answer matches ground truth chunk | Groundedness ≥ 0.55 | 🟢 PASS |
+| **Strict Low-Groundedness Refusal** | Blocks unsupported answers even if text looks plausible | Refusal output emitted | 🟢 PASS |
+| **Stream Non-Leakage** | Ensures SSE never emits tokens before validation | Zero unvalidated tokens | 🟢 PASS |
+| **Scoped Query Isolation** | Restricts vector & lexical search to chosen document ID | Document boundary isolated | 🟢 PASS |
+| **Fabricated Term Rejection** | Discards LLM summary terms not present in document text | Hallucination discarded | 🟢 PASS |
+| **Typo & Slang Tolerance** | Normalizes casual queries (`wat is the sick leave policy`) | Clean grounded answer | 🟢 PASS |
+| **Vague Scoped Resolution** | Resolves `what is it?` against scoped document name | Scope-targeted summary | 🟢 PASS |
 
 ---
 
@@ -68,18 +77,20 @@ DocuMind includes an automated evaluation harness (`scripts/eval.py`) executed a
 - **`python-docx` & `openpyxl` Ingestion**: Extracts headings, bold keys, and tabular data from Word documents and Excel sheets.
 - **Section-Preserving Chunking**: Splits text along headings and sentence boundaries without slicing mid-number, code, or entity.
 
-### 2. Hybrid Search & Neural Re-Ranking
-- **Supabase pgvector + Okapi BM25**: Combines cosine semantic vector distance with term-frequency lexical ranking.
-- **Exact Identifier Boosting**: High-priority score boost for part numbers, employee IDs (`EMP1024`), dates, and dollar amounts.
-- **Local Cross-Encoder**: Scores `(query, passage)` pairs via `cross-encoder/ms-marco-MiniLM-L-6-v2` with zero external API cost.
+### 2. High-Speed Hybrid Search & Neural Re-Ranking
+- **Supabase pgvector + Okapi BM25**: Combines cosine semantic vector distance with term-frequency lexical ranking in parallel (`ThreadPoolExecutor`).
+- **Typo-Tolerant Query Normalization**: Fast `< 0.2ms` dictionary and regex normalizer cleans typos, casual contractions, and slang without adding LLM round-trips.
+- **Vague Scoped Query Resolution**: Resolves questions like `"what is it?"` or `"tell me about this"` against active document metadata before retrieval.
+- **Local Cross-Encoder**: Scores `(query, passage)` pairs via `cross-encoder/ms-marco-MiniLM-L-6-v2` loaded once on startup.
 
 ### 3. Strict Anti-Hallucination Sufficiency Gate
 - Evaluates candidate relevance before calling Gemini. If relevance or keyword density is below threshold, immediately returns a clean refusal without fabricating answers or citations.
+- Groundedness threshold (`0.55`) ensures low-groundedness outputs are converted to clear refusals.
 
 ### 4. Interactive UX & Telemetry Inspector
-- **Evidence Cards**: Collapsible cards rendering the exact chunk quote, page number, and source file. Clicking a citation badge smoothly scrolls to and highlights the corresponding evidence card.
+- **Evidence Cards**: Collapsible cards rendering the exact chunk quote, page number, and source file with scroll-to-highlight animations.
 - **Telemetry Drawer**: Live inspect drawer showing resolved query, candidate count, Cross-Encoder scores, and groundedness percentages.
-- **Recent Analysis & Library**: All documents and chat sessions persist in Supabase PostgreSQL and survive backend restarts.
+- **Live Status Polling & Highlight**: Active background polling for indexing files with animated sidebar highlighting and counter updates.
 
 ---
 
@@ -89,6 +100,7 @@ DocuMind includes an automated evaluation harness (`scripts/eval.py`) executed a
 - **Python 3.10+** (tested on Python 3.11 & 3.13)
 - **Node.js 18+** and npm
 - **Google Gemini API Key** (Free tier available at [Google AI Studio](https://aistudio.google.com/))
+- **Supabase Account** with PostgreSQL 17 + `pgvector` extension
 
 ### 2. Installation
 
@@ -100,13 +112,26 @@ cd Documind-RAG-Platform
 # Copy environment template
 cp .env.example .env
 ```
-Edit `.env` and add your Gemini API key:
+
+Edit `.env` and configure required variables:
 ```env
+# Google Gemini
 GEMINI_API_KEY=your_actual_gemini_api_key
 GEMINI_MODEL=gemini-2.5-flash
 GEMINI_EMBEDDING_MODEL=gemini-embedding-001
-MAX_FILE_SIZE_MB=25
+
+# Supabase PostgreSQL + pgvector
+DATABASE_URL=postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+
+# HuggingFace (Optional - for faster Cross-Encoder downloads)
+HF_TOKEN=your_optional_hf_token
+
+# CORS
+CORS_ORIGINS=http://localhost:5173,https://documind-rag-platform.vercel.app
+
+# Reranker & Guardrails
 ENABLE_RERANKER=true
+GROUNDEDNESS_THRESHOLD=0.55
 ```
 
 #### Install Backend Dependencies
@@ -166,51 +191,64 @@ cd frontend
 npm run dev
 ```
 * Web Application: `http://localhost:5173`
-* Vite automatically proxies all `/api/*`, `/documents/*`, and `/chat/*` requests to `http://127.0.0.1:8000`.
+* Vite automatically proxies `/api/*` requests to `http://127.0.0.1:8000`.
 
 ---
 
-## 🧪 Running Automated Tests & Benchmark
+## 🧪 Running Automated Tests
 
-### 1. Run End-to-End Functional Test
 ```bash
-python test_e2e_verification.py
-```
-
-### 2. Run Full 35-Query Evaluation Harness
-```bash
-python scripts/eval.py
+# Run 7 Grounding Guardrail Safety Tests
+python -m pytest tests/test_grounding_guardrails.py
 ```
 
 ---
 
 ## 🌐 Production Deployment Guide
 
-### Deployment Architecture
-- **Frontend**: Deploy to **Vercel** (Static SPA with `frontend/vercel.json` rewrites).
-- **Backend**: Deploy to **Render** or **Railway** as a containerized Python Web Service connected to **Supabase**.
-- **Database & Vectors**: Managed **Supabase (PostgreSQL 17 + pgvector)**, eliminating the need for stateful local disks.
+DocuMind uses a split production topology:
+
+```
+┌────────────────────────────────────────┐
+│   Vercel (Frontend Client SPA)         │
+│   https://documind-rag-platform.vercel.app│
+└───────────────────┬────────────────────┘
+                    │ HTTPS / REST / SSE Stream
+┌───────────────────▼────────────────────┐
+│   Render (FastAPI Python Web Service)   │
+│   https://documind-rag-platform.onrender.com│
+└─────────┬──────────────────────┬───────┘
+          │                      │
+┌─────────▼────────┐   ┌─────────▼────────┐
+│  Google Gemini   │   │  Supabase        │
+│  (GenAI SDK v2)  │   │  PostgreSQL 17   │
+│  Embed + Chat    │   │  + pgvector HNSW │
+└──────────────────┘   └──────────────────┘
+```
+
+### Why Split Deployment?
+- **Vercel**: Optimized for static React asset delivery, instant global edge caching, and zero frontend maintenance.
+- **Render**: Required for running the persistent FastAPI Python runtime, holding the `sentence-transformers` Cross-Encoder in memory, supporting long-lived SSE streaming responses, and managing background document vectorization.
+- **Supabase**: Managed PostgreSQL 17 database with native `pgvector` HNSW indexing, eliminating local stateful disks.
 
 ### Deploying Frontend to Vercel
-1. Link your repository to Vercel.
-2. Set **Root Directory** to `frontend`.
-3. Set **Build Command** to `npm run build`.
-4. Set **Output Directory** to `dist`.
-5. Add Environment Variable:
-   - `VITE_API_BASE_URL` = `https://your-backend-service.onrender.com` (e.g. `https://documind-rag-platform.onrender.com`, no trailing slash)
-   - *(Optional backward compatibility)*: `VITE_API_URL` is also supported.
+1. Connect GitHub repository to Vercel.
+2. Root Directory: `frontend`
+3. Build Command: `npm run build`
+4. Output Directory: `dist`
+5. Environment Variable:
+   - `VITE_API_BASE_URL` = `https://documind-rag-platform.onrender.com` (no trailing slash)
 
-### Deploying Backend to Render / Railway / Docker
-1. Create a new **Web Service** on [Render](https://render.com) or [Railway](https://railway.app).
-2. Select repository and use `Dockerfile`.
-3. Add Environment Variables:
+### Deploying Backend to Render
+1. Create a new Web Service using the repository Dockerfile.
+2. Environment Variables:
    - `DATABASE_URL` = `postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres`
    - `GEMINI_API_KEY` = `your_gemini_api_key`
-   - `GEMINI_MODEL` = `gemini-flash-latest`
+   - `GEMINI_MODEL` = `gemini-2.5-flash`
    - `GEMINI_EMBEDDING_MODEL` = `gemini-embedding-001`
-   - `MAX_FILE_SIZE_MB` = `25`
+   - `CORS_ORIGINS` = `https://documind-rag-platform.vercel.app,http://localhost:5173`
    - `ENABLE_RERANKER` = `true`
-4. Deploy — database tables and pgvector indexes are automatically managed and persisted in Supabase.
+   - `PORT` = `8000`
 
 ---
 

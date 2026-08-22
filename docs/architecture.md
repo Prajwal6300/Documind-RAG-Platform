@@ -2,69 +2,70 @@
 
 ## Overview
 
-DocuMind is an enterprise-grade Retrieval-Augmented Generation (RAG) platform. It provides document ingestion, high-precision hybrid retrieval, Cross-Encoder re-ranking, and grounded generation backed by Google Gemini and Supabase PostgreSQL + pgvector.
+DocuMind is an enterprise-grade Retrieval-Augmented Generation (RAG) platform. It provides structure-aware document ingestion, typo-tolerant query normalization, high-precision parallel hybrid retrieval, Cross-Encoder re-ranking, and grounded generation backed by Google Gemini and Supabase PostgreSQL + pgvector.
 
 ---
 
-## 1. High-Level Architecture Diagram
+## 1. Production Deployment Topology
+
+```
+┌────────────────────────────────────────────────────────┐
+│   Vercel Global Edge Network                           │
+│   Frontend Client SPA (React 18 + Vite + Tailwind)     │
+│   URL: https://documind-rag-platform.vercel.app        │
+└───────────────────────────┬────────────────────────────┘
+                            │ HTTPS (REST & Server-Sent Events SSE)
+                            │ Configured via VITE_API_BASE_URL
+┌───────────────────────────▼────────────────────────────┐
+│   Render Containerized Web Service (FastAPI)           │
+│   URL: https://documind-rag-platform.onrender.com      │
+│   - Startup Cross-Encoder Re-Ranker                    │
+│   - Fast Query Normalizer & Scoped Resolver            │
+│   - Concurrent Candidate Retrieval (ThreadPoolExecutor)│
+│   - Anti-Hallucination Sufficiency Gate                │
+│   - Groundedness Evaluator & Citation Mapper           │
+└──────────────┬──────────────────────────┬──────────────┘
+               │                          │
+┌──────────────▼──────────────┐  ┌────────▼──────────────┐
+│  Google Gemini API          │  │  Supabase PostgreSQL  │
+│  - gemini-embedding-001     │  │  - PostgreSQL 17.6    │
+│  - gemini-2.5-flash         │  │  - pgvector 0.8.2     │
+│  - google-genai SDK v2      │  │  - 3072-dim HNSW idx  │
+└─────────────────────────────┘  └───────────────────────┘
+```
+
+---
+
+## 2. High-Level RAG Pipeline Flow
 
 ```mermaid
 graph TD
-    subgraph Client ["Frontend Client (React 18 + Vite)"]
-        UI["Workspace Chat UI"]
-        EV["Evidence & Citation Cards"]
-        TL["Observability Telemetry Drawer"]
+    subgraph Ingestion ["1. Document Ingestion Pipeline"]
+        A["User Document (PDF / DOCX / TXT / XLSX / PPTX)"] --> B["Format Extractor (PyMuPDF / python-docx / openpyxl)"]
+        B --> C["Heading-Aware Structure Chunking (~650 tokens, overlap 120)"]
+        C --> D["Dense Embedder (Gemini gemini-embedding-001, 3072-dim)"]
+        D --> E[("Supabase PostgreSQL + pgvector (document_chunks with HNSW)")]
+        C --> F[("Supabase PostgreSQL Relational Schema (documents, chat_sessions)")]
     end
 
-    subgraph API ["Backend API Layer (FastAPI)"]
-        RT["REST & SSE Endpoints (/api/chat, /api/documents)"]
-        Auth["Security & Request Validation"]
+    subgraph Retrieval ["2. Multi-Stage Hybrid Retrieval & Re-Ranking"]
+        Q["User Query (Typos / Slang / Vague)"] --> QN["Fast Query Normalizer (< 0.2ms) & Scoped Resolver"]
+        QN --> H1["Semantic Vector Search (pgvector cosine <=> HNSW)"]
+        QN --> H2["Lexical BM25 Search + Exact Match Boosting"]
+        H1 & H2 --> M["Merged & Deduplicated Candidates (Parallel ThreadPoolExecutor)"]
+        M --> RR["Neural Cross-Encoder Re-Ranker (ms-marco-MiniLM-L-6-v2)"]
+        RR --> SG{"Anti-Hallucination Sufficiency Gate"}
     end
 
-    subgraph Ingestion ["Document Ingestion & Indexing"]
-        Parser["Multi-Format Parser (PyMuPDF, docx, openpyxl)"]
-        Chunker["Structure-Aware Recursive Chunker (~650 tokens, overlap 120)"]
-        Embedder["Dense Embedder (Gemini gemini-embedding-001, 3072-dim)"]
+    subgraph Generation ["3. Grounded Synthesis & Observability"]
+        SG -- "Insufficient / Irrelevant" --> REF["Explicit Refusal: 'Not found in uploaded documents'"]
+        SG -- "Sufficient Evidence" --> LLM["Google Gemini Generation (Strict Document-Bound Prompt)"]
+        LLM --> CIT["Structured Section Parsing & Citation Linking"]
+        CIT --> UI["Live React Chat UI with Evidence Cards & Telemetry Drawer"]
+        CIT --> LOGS[("Structured Observability Logs")]
     end
 
-    subgraph Storage ["Supabase PostgreSQL 17.6 + pgvector"]
-        PGDocs[("documents Table")]
-        PGChunks[("document_chunks Table with HNSW Index")]
-        PGSessions[("chat_sessions Table")]
-        PGMessages[("chat_messages Table")]
-    end
-
-    subgraph Retrieval ["Hybrid Retrieval & Evaluation"]
-        QueryProc["Zero-LLM Query Analyzer & Entity Extractor"]
-        VecSearch["pgvector Cosine Distance Search (<=>)"]
-        LexSearch["In-Memory BM25 Lexical Indexer"]
-        Rerank["Neural Cross-Encoder (ms-marco-MiniLM-L-6-v2)"]
-        SuffCheck{"Anti-Hallucination Sufficiency Gate"}
-    end
-
-    subgraph LLM ["Generation & Groundedness"]
-        Gemini["Google Gemini LLM (Strict Document-Bound Prompt)"]
-        Groundedness["Multi-Factor Groundedness Evaluator"]
-    end
-
-    UI --> RT
-    RT --> Parser
-    Parser --> Chunker
-    Chunker --> Embedder
-    Embedder --> PGChunks
-    Parser --> PGDocs
-
-    RT --> QueryProc
-    QueryProc --> VecSearch & LexSearch
-    VecSearch --> PGChunks
-    VecSearch & LexSearch --> Rerank
-    Rerank --> SuffCheck
-    SuffCheck -- "Sufficient" --> Gemini
-    SuffCheck -- "Insufficient" --> RT
-    Gemini --> Groundedness
-    Groundedness --> RT
-    RT --> PGSessions & PGMessages
-    RT --> EV & TL & UI
+    UI --> Q
 ```
 
 ---
