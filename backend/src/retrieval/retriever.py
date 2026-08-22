@@ -11,6 +11,7 @@ Architecture:
   6. Final Selection: Selects strongest FINAL_CONTEXT_CHUNKS (e.g. 3-5) for Gemini generation.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from backend.src.utils.config import (
     RETRIEVAL_CANDIDATES,
     FINAL_CONTEXT_CHUNKS,
@@ -251,35 +252,50 @@ def _retrieve_candidates(
                 if chunk.get("keyword_ratio", 0) > existing.get("keyword_ratio", 0):
                     existing["keyword_ratio"] = chunk["keyword_ratio"]
 
-    # Build search query list (limit to top 3 expansions)
+    # Build search query list (limit to top 2: primary + 1 most discriminative expansion)
     queries_to_search = [query]
     if expanded_queries:
         for v in expanded_queries:
             if v and v.lower() != query.lower() and v not in queries_to_search:
                 queries_to_search.append(v)
-    queries_to_search = queries_to_search[:3]
+    queries_to_search = queries_to_search[:2]
 
-    # 1. Semantic search with Supabase pgvector
-    for q_str in queries_to_search:
-        q_emb = embed_query(q_str)
-        if q_emb:
-            _merge(query_vector_store(q_emb, top_k=top_k, document_id=document_id))
-
-    # 2. Lexical BM25 & exact term search
     meaningful_tokens = tokenize_meaningful(query)
     if query_keywords:
         for kw in query_keywords:
             meaningful_tokens.extend(tokenize_meaningful(kw))
     meaningful_tokens = list(dict.fromkeys(meaningful_tokens))
 
-    lex_candidates = _lexical_candidates(
-        query=query,
-        query_tokens=meaningful_tokens,
-        entities=entities or [],
-        document_id=document_id,
-        top_k=top_k,
-    )
-    _merge(lex_candidates)
+    def _fetch_pgvector(q_str: str) -> list[dict]:
+        try:
+            q_emb = embed_query(q_str)
+            if q_emb:
+                return query_vector_store(q_emb, top_k=top_k, document_id=document_id)
+        except Exception as exc:
+            logger.warning("Parallel pgvector query failed for '%s': %s", q_str[:30], exc)
+        return []
+
+    def _fetch_lexical() -> list[dict]:
+        try:
+            return _lexical_candidates(
+                query=query,
+                query_tokens=meaningful_tokens,
+                entities=entities or [],
+                document_id=document_id,
+                top_k=top_k,
+            )
+        except Exception as exc:
+            logger.warning("Parallel lexical search failed: %s", exc)
+        return []
+
+    # Run semantic and lexical searches concurrently
+    with ThreadPoolExecutor(max_workers=max(2, len(queries_to_search) + 1)) as executor:
+        sem_futures = [executor.submit(_fetch_pgvector, q_str) for q_str in queries_to_search]
+        lex_future = executor.submit(_fetch_lexical)
+
+        for fut in sem_futures:
+            _merge(fut.result())
+        _merge(lex_future.result())
 
     return list(candidates.values())
 

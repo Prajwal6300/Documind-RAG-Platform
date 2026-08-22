@@ -8,6 +8,7 @@ from backend.src.retrieval.lexical_search import (
     calculate_keyword_overlap,
 )
 from backend.src.retrieval.query_analyzer import (
+    normalize_casual_query,
     normalize_query_text,
     strip_question_boilerplate,
     classify_question,
@@ -18,6 +19,7 @@ from backend.src.retrieval.query_analyzer import (
     is_broad_question,
     looks_like_follow_up,
     resolve_follow_up,
+    resolve_vague_scoped_query,
 )
 from backend.src.retrieval.reranker import (
     rerank_chunks,
@@ -34,6 +36,7 @@ __all__ = [
     "tokenize_meaningful",
     "calculate_exact_match_boost",
     "calculate_keyword_overlap",
+    "normalize_casual_query",
     "normalize_query_text",
     "strip_question_boilerplate",
     "classify_question",
@@ -44,6 +47,7 @@ __all__ = [
     "is_broad_question",
     "looks_like_follow_up",
     "resolve_follow_up",
+    "resolve_vague_scoped_query",
     "rerank_chunks",
     "calculate_groundedness_score",
     "retrieve",

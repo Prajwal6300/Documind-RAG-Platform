@@ -47,6 +47,8 @@ from backend.src.retrieval import (
     expand_query,
     is_broad_question,
     resolve_follow_up,
+    normalize_casual_query,
+    resolve_vague_scoped_query,
 )
 from backend.src.llm import generate_answer
 from backend.src.utils.logger import log_pipeline_event
@@ -309,7 +311,9 @@ def answer_question(
         }
 
     # 1. Query Normalization & Context Resolution
-    resolved_question = resolve_follow_up(question, chat_history)
+    normalized_question = normalize_casual_query(question)
+    resolved_question = resolve_follow_up(normalized_question, chat_history)
+    resolved_question = resolve_vague_scoped_query(resolved_question, document_id=document_id)
     question_type = classify_question(resolved_question)
     keywords = extract_keywords(resolved_question)
     entities = extract_entities(resolved_question)

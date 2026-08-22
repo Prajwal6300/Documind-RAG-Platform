@@ -43,11 +43,170 @@ _SINGULAR_PLURAL_MAP = {
 }
 
 
-def normalize_query_text(question: str) -> str:
-    """Normalize query for search: lowercase, punctuation cleaning, whitespace collapse."""
+# Common typos, contractions, slang, and phonetic misspellings in document queries
+_CASUAL_TYPO_MAP = {
+    # Question words & contractions
+    "wat": "what",
+    "wht": "what",
+    "wot": "what",
+    "whats": "what is",
+    "wat's": "what is",
+    "wats": "what is",
+    "wht's": "what is",
+    "whts": "what is",
+    "hw": "how",
+    "hows": "how is",
+    "how's": "how is",
+    "wheres": "where is",
+    "where's": "where is",
+    "whos": "who is",
+    "who's": "who is",
+    "whens": "when is",
+    "when's": "when is",
+    "whys": "why is",
+    "why's": "why is",
+    # Chat / casual slang
+    "abt": "about",
+    "abou": "about",
+    "plz": "please",
+    "pls": "please",
+    "plse": "please",
+    "thx": "thanks",
+    "ty": "thank you",
+    "r": "are",
+    "u": "you",
+    "ur": "your",
+    "ur's": "yours",
+    "urs": "yours",
+    "gimme": "give me",
+    "lemme": "let me",
+    "wanna": "want to",
+    "gonna": "going to",
+    "kinda": "kind of",
+    "im": "i am",
+    "i'm": "i am",
+    "cant": "cannot",
+    "can't": "cannot",
+    "dont": "do not",
+    "don't": "do not",
+    "wont": "will not",
+    "won't": "will not",
+    "didnt": "did not",
+    "didn't": "did not",
+    "doesnt": "does not",
+    "doesn't": "does not",
+    "isnt": "is not",
+    "isn't": "is not",
+    "arent": "are not",
+    "aren't": "are not",
+    "couldnt": "could not",
+    "couldn't": "could not",
+    "shouldnt": "should not",
+    "shouldn't": "should not",
+    "wouldnt": "would not",
+    "wouldn't": "would not",
+    # Domain concepts & common misspellings
+    "skil": "skill",
+    "skils": "skills",
+    "skillz": "skills",
+    "experiance": "experience",
+    "experince": "experience",
+    "experence": "experience",
+    "exp": "experience",
+    "exps": "experiences",
+    "salry": "salary",
+    "slary": "salary",
+    "sallary": "salary",
+    "salaries": "salaries",
+    "compansation": "compensation",
+    "compensasion": "compensation",
+    "compensashun": "compensation",
+    "polcy": "policy",
+    "polecy": "policy",
+    "policys": "policies",
+    "policie": "policy",
+    "doc": "document",
+    "docs": "documents",
+    "doce": "document",
+    "docuemnt": "document",
+    "documnt": "document",
+    "documnts": "documents",
+    "emp": "employee",
+    "emps": "employees",
+    "emplyee": "employee",
+    "empolyee": "employee",
+    "employe": "employee",
+    "employes": "employees",
+    "req": "requirement",
+    "reqs": "requirements",
+    "requirment": "requirement",
+    "requirments": "requirements",
+    "qualifcation": "qualification",
+    "qualifactions": "qualifications",
+    "qualificaton": "qualification",
+    "eduation": "education",
+    "educaton": "education",
+    "educashun": "education",
+    "desc": "description",
+    "descp": "description",
+    "info": "information",
+    "sumary": "summary",
+    "sumarize": "summarize",
+    "summariz": "summarize",
+    "sumerize": "summarize",
+    "overveiw": "overview",
+    "differnce": "difference",
+    "diference": "difference",
+    "diff": "difference",
+    "diffs": "differences",
+    "detials": "details",
+    "detals": "details",
+    "benifit": "benefit",
+    "benifits": "benefits",
+    "benefet": "benefit",
+    "insuranc": "insurance",
+    "insurence": "insurance",
+    "proj": "project",
+    "projs": "projects",
+    "cert": "certificate",
+    "certi": "certificate",
+    "certifcate": "certificate",
+    "certificat": "certificate",
+    "org": "organization",
+    "dept": "department",
+    "depts": "departments",
+}
+
+
+def normalize_casual_query(question: str) -> str:
+    """Normalize casual phrasing, contractions, slang, and common typos without altering semantic intent."""
     if not question:
         return ""
-    q = question.lower()
+
+    q = re.sub(r"\s+", " ", question).strip()
+    q = re.sub(r"[?!.]{2,}", "?", q)
+
+    words = re.findall(r"[\w'-]+|[^\w\s]", q)
+    normalized_words = []
+
+    for w in words:
+        w_lower = w.lower()
+        if w_lower in _CASUAL_TYPO_MAP:
+            normalized_words.append(_CASUAL_TYPO_MAP[w_lower])
+        else:
+            normalized_words.append(w)
+
+    result = " ".join(normalized_words)
+    result = re.sub(r"\s+([?.!,])", r"\1", result)
+    result = re.sub(r"\s+", " ", result).strip()
+    return result
+
+
+def normalize_query_text(question: str) -> str:
+    """Normalize query for search: lowercase, typo normalization, punctuation cleaning, whitespace collapse."""
+    if not question:
+        return ""
+    q = normalize_casual_query(question).lower()
     q = re.sub(r"[^\w\s\-$₹€£%./:@]", " ", q)
     q = re.sub(r"\s+", " ", q).strip()
     return q
@@ -441,3 +600,90 @@ def resolve_follow_up(question: str, chat_history: list[dict] | None) -> str:
         return question
 
     return f"{prior_user} — follow-up: {question}"
+
+
+# ---------------------------------------------------------------------------
+# Vague / Pronoun-Based Scoped Question Resolution
+# ---------------------------------------------------------------------------
+
+_VAGUE_PRONOUN_QUERIES = {
+    "what is it",
+    "what is it?",
+    "what is this",
+    "what is this?",
+    "what is this document",
+    "what is this document?",
+    "what is this file",
+    "what is this file?",
+    "tell me about this",
+    "tell me about this.",
+    "tell me about this?",
+    "tell me about it",
+    "tell me about it?",
+    "tell me about it.",
+    "summarize this",
+    "summarize it",
+    "summary of this",
+    "summary of it",
+    "what does it say",
+    "what does this say",
+    "who is this",
+    "who is it",
+    "what is inside",
+    "what is inside it",
+    "overview of this",
+    "overview of it",
+    "explain this",
+    "explain it",
+    "what's this",
+    "what's this about",
+    "what is this about",
+}
+
+
+def resolve_vague_scoped_query(
+    question: str,
+    document_id: str | None = None,
+    doc_name: str | None = None,
+    doc_title: str | None = None,
+) -> str:
+    """Resolve vague/pronoun queries (e.g. 'what is it?', 'tell me about this') when scoped to a specific document."""
+    if not question:
+        return ""
+
+    name = doc_title or doc_name or ""
+    if not name and document_id:
+        try:
+            from backend.src.vectordb.database import get_document_by_id
+            doc = get_document_by_id(document_id)
+            if doc:
+                name = doc.get("title") or doc.get("name") or ""
+        except Exception:
+            pass
+
+    if not name:
+        return question
+
+    clean_q = normalize_query_text(question)
+    clean_name = re.sub(r"\.[a-zA-Z0-9]+$", "", name).replace("_", " ").replace("-", " ").strip()
+
+    is_vague = (
+        clean_q in _VAGUE_PRONOUN_QUERIES
+        or (len(clean_q.split()) <= 4 and any(p in clean_q.split() for p in ["it", "this", "file", "document", "doc"]))
+    )
+
+    if is_vague:
+        if "who" in clean_q:
+            return f"Who is the person, applicant, or subject in {clean_name} ({name})?"
+        elif any(s in clean_q for s in ["summar", "overview", "gist"]):
+            return f"Summarize and provide an overview of {clean_name} ({name})"
+        else:
+            return f"What is {clean_name} ({name}) about? Overview and details of {clean_name}"
+
+    resolved = re.sub(
+        r"\b(in|from|about)\s+(?:it|this\s+document|this\s+file|this)\b",
+        f"\\1 {clean_name}",
+        question,
+        flags=re.IGNORECASE,
+    )
+    return resolved
