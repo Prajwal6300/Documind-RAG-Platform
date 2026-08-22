@@ -177,7 +177,7 @@ export function AppProvider({ children }) {
     if (!hasProcessing) return;
 
     // Use a ref to avoid recreating the interval on every documents change
-    const intervalRef = useRef<NodeJS.Timeout | null>();
+    const intervalRef = useRef(null);
     if (intervalRef.current) clearInterval(intervalRef.current);
 
     intervalRef.current = setInterval(async () => {
