@@ -20,6 +20,7 @@ export function AppProvider({ children }) {
   const [isLoadingRecent, setIsLoadingRecent] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isLoadingSupportGuides, setIsLoadingSupportGuides] = useState(true);
+  const [recentlyUploadedDocId, setRecentlyUploadedDocId] = useState(null);
 
   // True when the backend is unreachable so pages can show a clear
   // "can't connect to server" state instead of a silent failure.
@@ -171,34 +172,28 @@ export function AppProvider({ children }) {
     fetchSupportGuides();
   }, [fetchDocuments, fetchRecentAnalyses, fetchArchive, fetchSuggestedQuestions, fetchSettings, fetchSupportGuides]);
 
-  // Real-time polling for documents currently in "Processing" state
+  // Real-time polling for documents currently in "Processing" or "Uploading" state
   useEffect(() => {
-    const hasProcessing = documents.some((d) => d.status === 'Processing');
+    const hasProcessing = documents.some((d) => d.status === 'Processing' || d.status === 'Uploading');
     if (!hasProcessing) return;
 
-    // Use a ref to avoid recreating the interval on every documents change
-    const intervalRef = useRef(null);
-    if (intervalRef.current) clearInterval(intervalRef.current);
-
-    intervalRef.current = setInterval(async () => {
+    const intervalId = setInterval(async () => {
       try {
         const updated = await api.getDocuments();
         setDocuments(updated);
         setServerError(null);
-        const stillProcessing = updated.some((d) => d.status === 'Processing');
+        const stillProcessing = updated.some((d) => d.status === 'Processing' || d.status === 'Uploading');
         if (!stillProcessing) {
           fetchSuggestedQuestions();
-          addToast('Document indexing completed!', 'success');
+          addToast('Document indexing complete and ready for AI chat!', 'success');
         }
       } catch (err) {
-        addToast(`Couldn't refresh documents: ${err.message}`, 'error');
+        console.warn('Polling documents update failed:', err);
       }
     }, 2000);
 
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
+    return () => clearInterval(intervalId);
+  }, [documents, fetchSuggestedQuestions, addToast]);
 
   // -------------------------------------------------------------------------
   // Document Operations
@@ -218,22 +213,29 @@ export function AppProvider({ children }) {
     // Client-side guardrail on size (25MB)
     const maxBytes = 25 * 1024 * 1024;
     if (file.size > maxBytes) {
-      addToast(`File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds 25MB limit.`, 'error');
-      return;
+      const errText = `File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds 25MB limit.`;
+      addToast(errText, 'error');
+      throw new Error(errText);
     }
-
-    addToast(`Uploading "${file.name}"... indexing initiated.`, 'info');
 
     try {
       const newDoc = await api.uploadDocument(file, title);
       setDocuments((prev) => [newDoc, ...prev.filter((d) => d.id !== newDoc.id)]);
-      // A just-uploaded document is the user's most likely intended context.
-      // Keep its scope selected so a follow-up cannot silently retrieve from an
-      // unrelated older document while indexing finishes.
       setSelectedScope(newDoc.name);
+      setRecentlyUploadedDocId(newDoc.id);
+
+      // Auto-clear recently uploaded highlight after 8 seconds
+      setTimeout(() => {
+        setRecentlyUploadedDocId((prev) => (prev === newDoc.id ? null : prev));
+      }, 8000);
+
+      addToast(`"${newDoc.name}" uploaded successfully! Indexing document...`, 'success');
       fetchSuggestedQuestions();
+      return newDoc;
     } catch (err) {
-      addToast(`Upload failed: ${err.message}`, 'error');
+      const msg = err.message || 'Upload failed. Please check the backend connection.';
+      addToast(msg, 'error');
+      throw err;
     }
   };
 
@@ -425,6 +427,8 @@ export function AppProvider({ children }) {
         setIsSupportModalOpen,
         mobileSidebarOpen,
         setMobileSidebarOpen,
+        recentlyUploadedDocId,
+        setRecentlyUploadedDocId,
         toasts,
         addToast,
         removeToast,

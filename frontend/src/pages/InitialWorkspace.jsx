@@ -12,6 +12,7 @@ export default function InitialWorkspace() {
     suggestedQuestions,
     selectedScope,
     setSelectedScope,
+    recentlyUploadedDocId,
   } = useApp();
 
   const [query, setQuery] = useState('');
@@ -21,6 +22,7 @@ export default function InitialWorkspace() {
   const attachmentRef = useRef(null);
   const scopeRef = useRef(null);
 
+  const activeDocs = documents.filter((d) => d.status === 'Indexed' || d.status === 'Processing' || d.status === 'Uploading');
   const indexedDocs = documents.filter((d) => d.status === 'Indexed');
 
   // Close menus on outside click
@@ -79,11 +81,29 @@ export default function InitialWorkspace() {
           ✦ What would you like to know about your documents?
         </h1>
         <p className="font-body-lg text-body-md md:text-body-lg text-muted-text max-w-2xl mx-auto leading-relaxed">
-          {indexedDocs.length > 0
-            ? `Ask questions across your ${indexedDocs.length} indexed ${indexedDocs.length === 1 ? 'document' : 'documents'}. DocuMind retrieves strictly grounded evidence using Gemini.`
+          {activeDocs.length > 0
+            ? `Ask questions across your ${activeDocs.length} ${activeDocs.length === 1 ? 'document' : 'documents'}. DocuMind retrieves strictly grounded evidence using Gemini.`
             : 'Upload PDF, DOCX, or TXT documents to start asking questions grounded strictly in your files.'}
         </p>
       </div>
+
+      {/* Recently uploaded banner */}
+      {recentlyUploadedDocId && (
+        <div className="max-w-4xl mx-auto w-full mb-4 px-4 py-2.5 bg-coral-accent/10 border border-coral-accent/30 rounded-xl flex items-center justify-between text-xs text-coral-accent font-label-md animate-in fade-in slide-in-from-top-1 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">check_circle</span>
+            <span>
+              Document added! Search scope automatically targeted to <strong>"{selectedScope}"</strong>.
+            </span>
+          </div>
+          <button
+            onClick={() => navigate('/library')}
+            className="hover:underline font-semibold cursor-pointer shrink-0 ml-2"
+          >
+            View in Library →
+          </button>
+        </div>
+      )}
 
       {/* If 0 documents exist: Empty State CTA */}
       {documents.length === 0 ? (

@@ -7,6 +7,7 @@ export default function UploadDocumentModal() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [docTitle, setDocTitle] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const fileInputRef = useRef(null);
 
   if (!isUploadModalOpen) return null;
@@ -16,23 +17,31 @@ export default function UploadDocumentModal() {
     setIsUploadModalOpen(false);
     setSelectedFile(null);
     setDocTitle('');
+    setErrorMessage(null);
   };
 
   const handleFile = (file) => {
     if (!file) return;
+    setErrorMessage(null);
     const name = file.name;
     const ext = name.split('.').pop()?.toLowerCase();
     const allowed = ['pdf', 'docx', 'xlsx', 'txt', 'csv', 'pptx', 'md', 'xls', 'ppt', 'markdown'];
     if (!allowed.includes(ext)) {
-      addToast(`Unsupported file format .${ext}. Please select a PDF, DOCX, XLSX, TXT, CSV, PPTX, or Markdown file.`, 'error');
+      const msg = `Unsupported file format .${ext}. Please select a PDF, DOCX, XLSX, TXT, CSV, PPTX, or Markdown file.`;
+      setErrorMessage(msg);
+      addToast(msg, 'error');
       return;
     }
     if (file.size === 0) {
-      addToast('The selected file is empty. Please choose a non-empty file.', 'error');
+      const msg = 'The selected file is empty. Please choose a non-empty file.';
+      setErrorMessage(msg);
+      addToast(msg, 'error');
       return;
     }
     if (file.size > 25 * 1024 * 1024) {
-      addToast(`File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds 25MB limit.`, 'error');
+      const msg = `File size (${(file.size / (1024 * 1024)).toFixed(1)}MB) exceeds 25MB limit.`;
+      setErrorMessage(msg);
+      addToast(msg, 'error');
       return;
     }
     setSelectedFile(file);
@@ -66,11 +75,12 @@ export default function UploadDocumentModal() {
     }
 
     setIsUploading(true);
+    setErrorMessage(null);
     try {
       await uploadDocument(selectedFile, docTitle.trim());
       handleClose();
     } catch (err) {
-      addToast(`Upload failed: ${err.message}`, 'error');
+      setErrorMessage(err.message || 'Upload failed. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -163,6 +173,14 @@ export default function UploadDocumentModal() {
               className="w-full h-11 px-3.5 bg-canvas border border-outline/20 rounded-lg text-body-md text-on-surface placeholder:text-muted-text focus:outline-none focus:border-coral-accent focus:ring-1 focus:ring-coral-accent/50 disabled:opacity-60"
             />
           </div>
+
+          {/* Inline Error Message */}
+          {errorMessage && (
+            <div className="p-3.5 bg-error-container/50 border border-error/30 rounded-xl text-error text-xs flex items-start gap-2.5 animate-in fade-in">
+              <span className="material-symbols-outlined text-[18px] shrink-0 mt-0.5">error</span>
+              <span className="font-body-md leading-relaxed text-on-error-container">{errorMessage}</span>
+            </div>
+          )}
 
           {/* Footer Actions */}
           <div className="mt-4 pt-4 border-t border-outline/10 flex justify-end items-center gap-3">

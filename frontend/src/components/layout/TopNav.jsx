@@ -16,6 +16,7 @@ export default function TopNav({ showBackButton = true }) {
   const [health, setHealth] = useState(null);
   const [healthChecking, setHealthChecking] = useState(false);
   const indexedCount = documents.filter((doc) => doc.status === 'Indexed').length;
+  const processingCount = documents.filter((doc) => doc.status === 'Processing' || doc.status === 'Uploading').length;
 
   const checkHealth = async () => {
     setHealthChecking(true);
@@ -137,11 +138,17 @@ export default function TopNav({ showBackButton = true }) {
         {/* Files Indexed Counter */}
         <button
           onClick={() => navigate('/library')}
-          className="hidden sm:flex items-center gap-1.5 text-on-surface-variant hover:text-coral-accent font-body-md text-sm transition-colors cursor-pointer py-1 px-2 rounded-lg hover:bg-surface-container"
+          className="hidden sm:flex items-center gap-1.5 text-on-surface-variant hover:text-coral-accent font-body-md text-sm transition-colors cursor-pointer py-1 px-2.5 rounded-lg hover:bg-surface-container"
           title="View all files in Library"
         >
-          <span className="material-symbols-outlined text-[18px]">folder_open</span>
-          <span>{indexedCount} Files Indexed</span>
+          <span className={`material-symbols-outlined text-[18px] ${processingCount > 0 ? 'text-amber-500 animate-spin' : ''}`}>
+            {processingCount > 0 ? 'sync' : 'folder_open'}
+          </span>
+          <span>
+            {processingCount > 0
+              ? `${indexedCount} Indexed · ${processingCount} processing`
+              : `${indexedCount} ${indexedCount === 1 ? 'File' : 'Files'} Indexed`}
+          </span>
         </button>
 
         {/* Profile Avatar Button (Navigates to Settings) */}

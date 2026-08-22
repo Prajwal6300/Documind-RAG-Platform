@@ -9,11 +9,22 @@ export default function Sidebar() {
     setIsUploadModalOpen,
     mobileSidebarOpen,
     setMobileSidebarOpen,
+    recentlyUploadedDocId,
     addToast
   } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  const indexedDocs = documents.filter((doc) => doc.status === 'Indexed');
+  const navScrollRef = React.useRef(null);
+
+  // Show both indexed and processing/uploading documents in active sidebar list
+  const activeDocs = documents.filter((doc) => doc.status === 'Indexed' || doc.status === 'Processing' || doc.status === 'Uploading');
+
+  // Auto-scroll sidebar navigation to top when a new document is uploaded
+  React.useEffect(() => {
+    if (recentlyUploadedDocId && navScrollRef.current) {
+      navScrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [recentlyUploadedDocId]);
 
   const navItems = [
     { label: 'New Chat', path: '/', icon: 'add_box' },
@@ -102,14 +113,14 @@ export default function Sidebar() {
           }}
           className="w-full bg-coral-accent text-white font-label-md text-label-md py-3 px-4 rounded-lg 
                      flex items-center justify-center gap-2 mb-6 hover:bg-primary transition-all duration-200 
-                     shadow-sm hover:shadow active:scale-[0.99]"
+                     shadow-sm hover:shadow active:scale-[0.99] cursor-pointer"
         >
           <span className="material-symbols-outlined text-[20px]">upload_file</span>
           <span>Upload Documents</span>
         </button>
 
         {/* Main Navigation Links */}
-        <nav className="flex-1 flex flex-col gap-1 overflow-y-auto pr-1">
+        <nav ref={navScrollRef} className="flex-1 flex flex-col gap-1 overflow-y-auto pr-1">
           {navItems.map((item) => {
             const active = isNavActive(item.path);
             return (
@@ -143,36 +154,54 @@ export default function Sidebar() {
                 Indexed Documents
               </h2>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface-container-highest text-secondary">
-                {indexedDocs.length}
+                {activeDocs.length}
               </span>
             </div>
-            <div className="flex flex-col gap-0.5">
-              {indexedDocs.slice(0, 5).map((doc) => (
-                <button
-                  key={doc.id}
-                  onClick={() => handleDocClick(doc)}
-                  className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-left text-on-tertiary-fixed-variant 
-                             hover:bg-surface-container-highest transition-colors text-sm group w-full"
-                >
-                  <span className="material-symbols-outlined text-muted-text group-hover:text-coral-accent text-[18px] shrink-0">
-                    {doc.icon || 'draft'}
-                  </span>
-                  <span className="truncate flex-1 font-body-md text-xs group-hover:text-on-surface">
-                    {doc.name}
-                  </span>
-                  {doc.status === 'Processing' && (
-                    <span className="material-symbols-outlined text-[14px] text-muted-text animate-spin shrink-0">
-                      sync
-                    </span>
-                  )}
-                </button>
-              ))}
-              {indexedDocs.length > 5 && (
+            <div className="flex flex-col gap-1">
+              {activeDocs.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-muted-text italic">No documents indexed yet.</p>
+              ) : (
+                activeDocs.slice(0, 6).map((doc) => {
+                  const isNew = doc.id === recentlyUploadedDocId;
+                  const isProcessing = doc.status === 'Processing' || doc.status === 'Uploading';
+                  return (
+                    <button
+                      key={doc.id}
+                      onClick={() => handleDocClick(doc)}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-300 text-sm group w-full ${
+                        isNew
+                          ? 'bg-coral-accent/15 border border-coral-accent/40 text-coral-accent shadow-xs animate-in fade-in zoom-in-95'
+                          : 'text-on-tertiary-fixed-variant hover:bg-surface-container-highest'
+                      }`}
+                    >
+                      <span className={`material-symbols-outlined text-[18px] shrink-0 ${
+                        isNew ? 'text-coral-accent' : 'text-muted-text group-hover:text-coral-accent'
+                      }`}>
+                        {doc.icon || 'description'}
+                      </span>
+                      <span className="truncate flex-1 font-body-md text-xs group-hover:text-on-surface">
+                        {doc.title || doc.name}
+                      </span>
+                      {isProcessing ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] text-amber-500 font-semibold px-1.5 py-0.5 rounded bg-amber-500/10 shrink-0">
+                          <span className="material-symbols-outlined text-[12px] animate-spin">sync</span>
+                          <span>Indexing</span>
+                        </span>
+                      ) : isNew ? (
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-coral-accent text-white shrink-0 tracking-wide uppercase">
+                          New
+                        </span>
+                      ) : null}
+                    </button>
+                  );
+                })
+              )}
+              {activeDocs.length > 6 && (
                 <button
                   onClick={() => { navigate('/library'); closeSidebar(); }}
-                  className="text-left px-3 py-1 text-xs text-coral-accent hover:underline font-label-sm mt-1"
+                  className="text-left px-3 py-1 text-xs text-coral-accent hover:underline font-label-sm mt-1 cursor-pointer"
                 >
-                  + {indexedDocs.length - 5} more in Library →
+                  + {activeDocs.length - 6} more in Library →
                 </button>
               )}
             </div>

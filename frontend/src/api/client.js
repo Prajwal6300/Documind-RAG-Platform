@@ -55,27 +55,35 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = REQUEST_TIMEOUT) 
 
 async function handleResponse(response, timeoutMs = REQUEST_TIMEOUT) {
   if (!response.ok) {
-    let errorDetail = 'Request failed';
+    let errorDetail = '';
     let serverCode = null;
     try {
       const errJson = await response.json();
-      errorDetail = errJson.detail || errJson.message || errorDetail;
+      errorDetail = errJson.detail || errJson.message || '';
       serverCode = errJson.code || null;
     } catch {
-      errorDetail = response.statusText || errorDetail;
+      errorDetail = response.statusText || '';
     }
 
     let message = errorDetail;
-    if (response.status === 429) {
-      message = errorDetail || 'Too many requests. Please wait a moment and try again.';
-    } else if (response.status === 503) {
-      message = 'The server is temporarily unavailable. Please try again in a moment.';
-    } else if (response.status === 502 || response.status === 504) {
-      message = 'The server took too long to respond. Please try again.';
-    } else if (response.status >= 500) {
-      message = errorDetail === 'Request failed'
-        ? 'Something went wrong on the server. Please try again.'
-        : errorDetail;
+    if (!message || message === 'Request failed') {
+      if (response.status === 409) {
+        message = 'A document with identical content or name already exists in the library.';
+      } else if (response.status === 413) {
+        message = 'File size exceeds the 25MB upload limit.';
+      } else if (response.status === 415) {
+        message = 'Unsupported file format. Please upload PDF, DOCX, XLSX, TXT, CSV, or PPTX.';
+      } else if (response.status === 429) {
+        message = 'Too many requests. Please wait a moment and try again.';
+      } else if (response.status === 503) {
+        message = 'The server is temporarily unavailable. Please try again in a moment.';
+      } else if (response.status === 502 || response.status === 504) {
+        message = 'The server took too long to respond. Please try again.';
+      } else if (response.status >= 500) {
+        message = 'Something went wrong on the server. Please try again.';
+      } else {
+        message = `Request failed (${response.status})`;
+      }
     }
 
     throw new ApiError(message, { status: response.status, code: serverCode });
