@@ -72,9 +72,9 @@ UPLOAD_DIR = Path(_get_val("storage", "upload_dir", "UPLOAD_DIR", "data/uploads"
 LOG_PATH = Path(_get_val("storage", "log_path", "LOG_PATH", "data/logs/documind.log"))
 
 MAX_FILE_SIZE_MB = _get_val("storage", "max_file_size_mb", "MAX_FILE_SIZE_MB", 25)
+ALLOWED_EXTENSIONS = set(_YAML_CONFIG.get("storage", {}).get("allowed_extensions", [
     "pdf", "docx", "txt", "csv", "xlsx", "xls", "pptx", "ppt", "md", "markdown"
 ]))
-])
 
 # --- Database Connectivity (timeouts to prevent hangs) ---
 DB_CONNECT_TIMEOUT = _get_val("storage", "connect_timeout", "DB_CONNECT_TIMEOUT", 15)
