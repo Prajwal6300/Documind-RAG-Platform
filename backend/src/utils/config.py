@@ -7,6 +7,7 @@ variables (`.env`) to dynamically override runtime settings.
 import os
 from pathlib import Path
 import logging
+import yaml
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -123,7 +124,7 @@ MAX_SUMMARY_CHUNKS = _get_val("retrieval", "max_summary_chunks", "MAX_SUMMARY_CH
 ENABLE_CONTEXT_EXPANSION = _get_val("retrieval", "enable_context_expansion", "ENABLE_CONTEXT_EXPANSION", True)
 MAX_EXPANSION_CHUNKS = _get_val("retrieval", "max_expansion_chunks", "MAX_EXPANSION_CHUNKS", 2)
 
-GROUNDUNDEDNESS_THRESHOLD = _get_val("retrieval", "groundedness_threshold", "GROUNDUNDEDNESS_THRESHOLD", 0.55)
+GROUNDEDNESS_THRESHOLD = _get_val("retrieval", "groundedness_threshold", "GROUNDEDNESS_THRESHOLD", 0.55)
 MIN_RERANK_SCORE = _get_val("retrieval", "min_rerank_score", "MIN_RERANK_SCORE", 0.30)
 
 # Hybrid ranking weights
