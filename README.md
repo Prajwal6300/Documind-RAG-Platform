@@ -290,10 +290,10 @@ Documind-RAG-Platform/
 │   ├── start.ps1                # PowerShell launcher
 │   └── start.sh                 # Unix launcher
 ├── tests/
-│   ├── test_e2e_verification.py # Automated integration verification test
-│   ├── test_accuracy.py         # 12-category accuracy test suite
-│   ├── test_multi.py            # Multi-document scoped test suite
-│   └── ...                      # Pipeline/retrieval/live-server test suites
+│   ├── test_grounding_guardrails.py # Deterministic safety & anti-hallucination guardrail tests (7/7 pass)
+│   ├── test_e2e_verification.py     # Automated FastAPI integration verification
+│   └── ...                          # Benchmark & pipeline validation suites
+├── pytest.ini                   # Standardized pytest test discovery configuration
 ├── SUPABASE_SETUP.md            # Supabase setup & verification guide
 ├── requirements.txt             # Production Python dependencies (psycopg, pgvector)
 ├── docker-compose.yml           # Production Docker Compose orchestration
