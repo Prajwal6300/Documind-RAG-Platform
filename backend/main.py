@@ -29,6 +29,7 @@ from backend.src.utils.errors import (
     http_exception_handler,
     validation_exception_handler,
 )
+from backend.src.retrieval.reranker import _load_cross_encoder
 
 from backend.src.api.routes import router as api_router
 
@@ -37,6 +38,14 @@ app = FastAPI(
     version="3.0.0",
     description="Enterprise RAG Document Intelligence Platform powered by Google Gemini and Supabase pgvector",
 )
+
+# ---------------------------------------------------------------------------
+# Load Cross-Encoder reranker model at startup so it does NOT load mid-request.
+# This eliminates the ~68s latency spike caused by loading sentence_transformers
+# for the first time during a user chat request (HuggingFace unauthenticated
+# warning + weight download).
+# ---------------------------------------------------------------------------
+_load_cross_encoder()
 
 # ---------------------------------------------------------------------------
 # CORS: restrict to explicitly configured frontend origins.

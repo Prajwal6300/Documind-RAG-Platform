@@ -1,6 +1,7 @@
 import hashlib
 import math
 import re
+import os
 from backend.src.utils.config import ENABLE_RERANKER, RERANKER_MODEL, GROUNDEDNESS_THRESHOLD
 from backend.src.utils.logger import logger
 
@@ -14,21 +15,25 @@ def _content_fingerprint(text: str) -> str:
     return hashlib.sha256(norm.encode("utf-8")).hexdigest()[:16]
 
 
-def _get_cross_encoder():
-    """Lazy load CrossEncoder singleton."""
+def _load_cross_encoder():
+    """Load CrossEncoder model at startup."""
     global _cross_encoder, _model_failed
     if not ENABLE_RERANKER or _model_failed:
         return None
 
-    if _cross_encoder is None:
-        try:
-            from sentence_transformers import CrossEncoder
-            _cross_encoder = CrossEncoder(RERANKER_MODEL, max_length=512)
-        except Exception as e:
-            logger.warning("CrossEncoder init skipped or failed (%s), using hybrid scoring.", e)
-            _model_failed = True
-            return None
-    return _cross_encoder
+    try:
+        from sentence_transformers import CrossEncoder
+        _cross_encoder = CrossEncoder(
+            RERANKER_MODEL,
+            max_length=512,
+            token=os.getenv("HF_TOKEN", "").strip() or None,
+        )
+        logger.info("CrossEncoder model loaded at startup: %s", RERANKER_MODEL)
+        return _cross_encoder
+    except Exception as e:
+        logger.warning("CrossEncoder init skipped or failed (%s), using hybrid scoring.", e)
+        _model_failed = True
+        return None
 
 
 def _sigmoid(x: float) -> float:
@@ -58,7 +63,7 @@ def rerank_chunks(query: str, chunks: list[dict], top_n: int = 6) -> list[dict]:
             deduped_chunks.append(chunk)
 
     chunks = deduped_chunks
-    model = _get_cross_encoder()
+    model = _cross_encoder
 
     if model is not None and len(chunks) > 1:
         try:
@@ -148,7 +153,6 @@ def calculate_groundedness_score(
         term_overlap = 0.8
 
     # Factor 3: Combined groundedness score
-    # If retrieval relevance is weak (< 0.25), penalize groundedness to prevent hallucination acceptance
     if avg_retrieval < 0.25:
         groundedness = min(0.50 * avg_retrieval + 0.50 * term_overlap, avg_retrieval * 1.5)
     else:
@@ -156,7 +160,7 @@ def calculate_groundedness_score(
 
     groundedness = max(0.0, min(1.0, groundedness))
 
-    is_grounded = (groundedness >= GROUNDEDNESS_THRESHOLD) and (avg_retrieval >= 0.20)
+    is_grounded = (groundedness >= 0.55) and (avg_retrieval >= 0.20)
 
     if groundedness >= 0.70:
         confidence = "High"

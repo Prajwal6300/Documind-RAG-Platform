@@ -35,7 +35,25 @@ export default function TopNav({ showBackButton = true }) {
   };
 
   useEffect(() => {
-    api.getHealth().then(setHealth).catch(() => setHealth(null));
+    let mounted = true;
+    async function pollHealth() {
+      try {
+        const data = await api.getHealth();
+        if (mounted) {
+          setHealth(data);
+        }
+      } catch (err) {
+        if (mounted) {
+          setHealth(null);
+        }
+      }
+    }
+    pollHealth();
+    const interval = setInterval(pollHealth, 15000);
+    return () => {
+      clearInterval(interval);
+      mounted = false;
+    };
   }, []);
 
   const isBackendOk = health?.status === 'healthy' || health?.status === 'degraded';

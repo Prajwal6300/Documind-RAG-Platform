@@ -176,7 +176,11 @@ export function AppProvider({ children }) {
     const hasProcessing = documents.some((d) => d.status === 'Processing');
     if (!hasProcessing) return;
 
-    const pollInterval = setInterval(async () => {
+    // Use a ref to avoid recreating the interval on every documents change
+    const intervalRef = useRef<NodeJS.Timeout | null>();
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(async () => {
       try {
         const updated = await api.getDocuments();
         setDocuments(updated);
@@ -191,8 +195,10 @@ export function AppProvider({ children }) {
       }
     }, 2000);
 
-    return () => clearInterval(pollInterval);
-  }, [documents, fetchSuggestedQuestions, addToast]);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   // -------------------------------------------------------------------------
   // Document Operations
