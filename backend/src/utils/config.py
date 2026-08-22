@@ -86,7 +86,7 @@ _cors_default = _YAML_CONFIG.get("security", {}).get("cors_origins", [])
 if isinstance(_cors_default, str):
     _cors_default = [o.strip() for o in _cors_default.split(",") if o.strip()]
 CORS_ORIGINS = [
-    o.strip()
+    o.strip().rstrip("/")
     for o in os.getenv("CORS_ORIGINS", ",".join(_cors_default)).split(",")
     if o.strip()
 ]

@@ -6,7 +6,16 @@
  * HTTP 4xx/5xx — each surfaced as a specific, user-readable Error message.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '';
+const API_BASE_URL = rawBaseUrl.replace(/\/+$/, '');
+
+if (!API_BASE_URL && import.meta.env.PROD) {
+  console.error(
+    '[DocuMind API Error] VITE_API_BASE_URL is not defined in this build!\n' +
+    'API calls will fall back to relative paths on Vercel and fail with HTML 404/rewrite responses.\n' +
+    'Please set VITE_API_BASE_URL=https://documind-rag-platform.onrender.com in Vercel Dashboard Settings -> Environment Variables and redeploy.'
+  );
+}
 
 // Timeouts (ms). Chat can legitimately take a while (retrieval + generation).
 const REQUEST_TIMEOUT = 15000;

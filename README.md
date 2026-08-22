@@ -197,7 +197,8 @@ python scripts/eval.py
 3. Set **Build Command** to `npm run build`.
 4. Set **Output Directory** to `dist`.
 5. Add Environment Variable:
-   - `VITE_API_URL` = `https://your-backend-service.onrender.com`
+   - `VITE_API_BASE_URL` = `https://your-backend-service.onrender.com` (e.g. `https://documind-rag-platform.onrender.com`, no trailing slash)
+   - *(Optional backward compatibility)*: `VITE_API_URL` is also supported.
 
 ### Deploying Backend to Render / Railway / Docker
 1. Create a new **Web Service** on [Render](https://render.com) or [Railway](https://railway.app).
