@@ -48,27 +48,24 @@ app = FastAPI(
 _load_cross_encoder()
 
 # ---------------------------------------------------------------------------
-# CORS: restrict to explicitly configured frontend origins.
-# Never use "*" with credentials; a wildcard is only allowed without cookies.
+# CORS: Allow configured origins, local development, and all Vercel domains.
 # ---------------------------------------------------------------------------
-if CORS_ORIGINS:
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=CORS_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
-else:
-    # No explicit origins configured -> do not allow cross-origin browser calls.
-    # Same-origin requests (e.g. via the Vite proxy) are unaffected.
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=[],
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+allowed_origins = list(set(CORS_ORIGINS + [
+    "https://documind-rag-platform.vercel.app",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:3000",
+]))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ---------------------------------------------------------------------------
 # Global exception handling: never return a raw crash / stack trace to clients.
