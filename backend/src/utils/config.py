@@ -30,7 +30,7 @@ def _load_yaml_config():
     return {}
 
 
- _YAML_CONFIG = _load_yaml_config()
+_YAML_CONFIG = _load_yaml_config()
 
 
 def _get_val(section: str, key: str, env_var: str, default):
