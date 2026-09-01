@@ -19,3 +19,4 @@ export default function CitationBadge({ citation, onCitationClick }) {
     </div>
   );
 }
+#documind
