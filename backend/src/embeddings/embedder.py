@@ -76,6 +76,9 @@ def embed_documents(documents: list[str]) -> list[list[float]]:
 
     client = _get_gemini_client() if EMBEDDING_PROVIDER == "gemini" else None
 
+    if EMBEDDING_PROVIDER == "gemini" and client is None:
+        raise RuntimeError("Gemini embeddings are unavailable. Configure GEMINI_API_KEY or explicitly set EMBEDDING_PROVIDER=local.")
+
     if client is not None:
         try:
             embeddings = []
@@ -94,7 +97,10 @@ def embed_documents(documents: list[str]) -> list[list[float]]:
                     embeddings.append(_normalize_vector(emb.values))
             return embeddings
         except Exception as exc:
-            logger.warning("Gemini embed failed (%s), falling back to local model.", exc)
+            # Mixing Gemini (3072-dimension) and local (384-dimension) vectors
+            # in one pgvector collection makes retrieval invalid. Fail the
+            # ingestion so it can be retried after the provider is restored.
+            raise RuntimeError("Gemini embedding request failed.") from exc
 
     # Fallback to SentenceTransformer
     local = _get_local_model()
@@ -109,6 +115,9 @@ def _embed_query_cached(query: str) -> tuple[float, ...]:
     """Internal cached implementation of query embedding."""
     client = _get_gemini_client() if EMBEDDING_PROVIDER == "gemini" else None
 
+    if EMBEDDING_PROVIDER == "gemini" and client is None:
+        raise RuntimeError("Gemini embeddings are unavailable. Configure GEMINI_API_KEY or explicitly set EMBEDDING_PROVIDER=local.")
+
     if client is not None:
         try:
             response = client.models.embed_content(
@@ -119,10 +128,7 @@ def _embed_query_cached(query: str) -> tuple[float, ...]:
             if response.embeddings:
                 return tuple(_normalize_vector(response.embeddings[0].values))
         except Exception as exc:
-            if EMBEDDING_PROVIDER == "gemini":
-                logger.warning("Gemini query embed failed (%s), using zero embedding fallback.", exc)
-                return ZERO_EMBEDDING
-            logger.warning("Gemini query embed failed (%s), falling back to local.", exc)
+            raise RuntimeError("Gemini embedding request failed.") from exc
 
     local = _get_local_model()
     raw = local.encode(query, normalize_embeddings=True)
@@ -134,4 +140,3 @@ def embed_query(query: str) -> list[float]:
     if not query or not query.strip():
         return []
     return list(_embed_query_cached(query.strip()))
-
