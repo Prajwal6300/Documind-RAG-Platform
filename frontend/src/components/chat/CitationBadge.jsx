@@ -11,7 +11,7 @@ export default function CitationBadge({ citation, onCitationClick }) {
                    text-label-sm font-label-sm text-secondary cursor-pointer 
                    hover:bg-coral-accent hover:text-white transition-colors duration-150 shadow-2xs"
         title={`${citation.docName}${citation.docType ? ` · ${citation.docType.replaceAll('_', ' ')}` : ''}${citation.docSummary ? ` · ${citation.docSummary}` : ''}`}
-        aria-label={`View evidence from ${citation.docName} page ${citation.page}`}
+        aria-label={`View evidence from ${citation.docName}${citation.page ? ` page ${citation.page}` : ''}`}
       >
         <span className="material-symbols-outlined text-[14px]">find_in_page</span>
         <span>{citation.label}</span>
@@ -19,4 +19,3 @@ export default function CitationBadge({ citation, onCitationClick }) {
     </div>
   );
 }
-#documind
