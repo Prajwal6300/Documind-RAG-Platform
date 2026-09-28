@@ -75,7 +75,7 @@ export default function DebugPanel({ debug, groundedness }) {
                   >
                     <div className="flex items-center justify-between text-coral-accent font-semibold">
                       <span>
-                        Chunk #{i + 1} — {c.source} (Page {c.page || 1})
+                        Chunk #{i + 1} — {c.source}{c.page != null ? ` (Page ${c.page})` : ''}
                       </span>
                       <span className="text-muted-text text-[10px]">
                         Rerank Score: {(c.rerank_score ?? c.final_score ?? 0).toFixed(3)}

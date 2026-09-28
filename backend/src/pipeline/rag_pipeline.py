@@ -119,13 +119,13 @@ def _build_evidences_and_sources(final_results: list[dict]) -> tuple[list[dict],
         metadata = r.get("metadata") or {}
         source = metadata.get("source", "Unknown Document")
         page = metadata.get("page")
-        if page is None or str(page).lower() == "none" or str(page).strip() == "":
-            page = 1
-        else:
+        if page is not None and str(page).lower() != "none" and str(page).strip() != "":
             try:
                 page = int(page)
             except Exception:
                 page = str(page)
+        else:
+            page = None
 
         ev_id = f"ev-{idx + 1}"
         text_quote = r.get("text", "").strip()
@@ -154,6 +154,11 @@ def _build_evidences_and_sources(final_results: list[dict]) -> tuple[list[dict],
             })
 
     return evidences, sources
+
+
+def _citation_label(extension: str, page: int | str | None) -> str:
+    """Format citations without inventing a page for non-paginated files."""
+    return f"[ {extension} · Page {page} ]" if page is not None else f"[ {extension} ]"
 
 
 def _refusal_result(groundedness: dict | None = None, debug_payload: dict | None = None) -> dict:
@@ -235,7 +240,7 @@ def _parse_answer_structure(raw_text: str, evidences: list[dict], sources: list[
                 if ev:
                     ext = Path(ev["docName"]).suffix.upper().replace(".", "") or "DOC"
                     citation_obj = {
-                        "label": f"[ {ext} · Page {ev['page']} ]",
+                        "label": _citation_label(ext, ev["page"]),
                         "docName": ev["docName"],
                         "page": ev["page"],
                         "evidenceId": ev["id"]
@@ -245,7 +250,7 @@ def _parse_answer_structure(raw_text: str, evidences: list[dict], sources: list[
                 ev = evidences[min(len(current_section["items"] if current_section else 0), len(evidences) - 1)]
                 ext = Path(ev["docName"]).suffix.upper().replace(".", "") or "DOC"
                 citation_obj = {
-                    "label": f"[ {ext} · Page {ev['page']} ]",
+                    "label": _citation_label(ext, ev["page"]),
                     "docName": ev["docName"],
                     "page": ev["page"],
                     "evidenceId": ev["id"]

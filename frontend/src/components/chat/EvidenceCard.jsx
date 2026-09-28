@@ -39,11 +39,13 @@ const EvidenceCard = forwardRef(function EvidenceCard(
               <span className="uppercase tracking-wider">DOCUMENT:</span>
               <span className="font-semibold text-white">{evidence.docName}</span>
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-coral-accent">find_in_page</span>
-              <span className="uppercase tracking-wider">PAGE:</span>
-              <span className="font-semibold text-white">{evidence.page}</span>
-            </span>
+            {evidence.page != null && (
+              <span className="flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[16px] text-coral-accent">find_in_page</span>
+                <span className="uppercase tracking-wider">PAGE:</span>
+                <span className="font-semibold text-white">{evidence.page}</span>
+              </span>
+            )}
             {evidence.docType && (
               <span className="flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px] text-coral-accent">category</span>
