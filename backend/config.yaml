@@ -22,7 +22,7 @@
 
 llm:
   provider: "gemini"
-  model: "gemini-flash-latest"
+  model: "gemini-2.5-flash"
   embedding_model: "gemini-embedding-001"
   max_tokens: 4096
   temperature: 0.1
@@ -71,6 +71,11 @@ retrieval:
 reranker:
   enabled: true
   model_name: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
+security:
+  cors_origins:
+    - "http://localhost:5173"
+    - "https://documind-rag-platform.vercel.app"
 
 observability:
   debug_mode: false

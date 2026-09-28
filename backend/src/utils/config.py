@@ -61,7 +61,7 @@ LLM_PROVIDER = _get_val("llm", "provider", "LLM_PROVIDER", "gemini")
 
 # --- Google Gemini Settings ---
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
-GEMINI_MODEL = _get_val("llm", "model", "GEMINI_MODEL", "gemini-flash-latest")
+GEMINI_MODEL = _get_val("llm", "model", "GEMINI_MODEL", "gemini-2.5-flash")
 GEMINI_EMBEDDING_MODEL = _get_val("llm", "embedding_model", "GEMINI_EMBEDDING_MODEL", "gemini-embedding-001")
 GEMINI_MAX_TOKENS = _get_val("llm", "max_tokens", "GEMINI_MAX_TOKENS", 4096)
 GEMINI_TEMPERATURE = _get_val("llm", "temperature", "GEMINI_TEMPERATURE", 0.1)

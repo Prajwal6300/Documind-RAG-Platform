@@ -5,6 +5,7 @@ strict anti-hallucination prompting and streaming support.
 """
 
 import os
+import time
 from typing import Generator
 from dotenv import load_dotenv
 from google import genai
@@ -171,17 +172,12 @@ def generate_answer(question: str, context: str, conversation: str | None = None
     if not client:
         return GEMINI_MISSING_KEY_ERROR
 
-    primary_model = os.getenv("GEMINI_MODEL", GEMINI_MODEL).strip() or "gemini-3.6-flash"
-    fallback_models = [
-        primary_model,
-        "gemini-3.6-flash",
-        "gemini-flash-latest",
-        "gemini-3.5-flash-lite",
-        "gemini-2.5-flash-lite",
-        "gemini-3.7-flash",
-    ]
-    # Deduplicate while preserving order
-    candidate_models = list(dict.fromkeys(fallback_models))
+    primary_model = os.getenv("GEMINI_MODEL", GEMINI_MODEL).strip() or "gemini-2.5-flash"
+    # Do not silently switch to unrelated model names: model access and pricing
+    # are a deployment choice and must remain controlled by GEMINI_MODEL.
+    # Retry only the configured model for transient provider outages. Never
+    # silently select a different model with different access or pricing.
+    candidate_models = [primary_model] * 2
 
     max_tokens = GEMINI_MAX_TOKENS
     temperature = GEMINI_TEMPERATURE
@@ -190,7 +186,7 @@ def generate_answer(question: str, context: str, conversation: str | None = None
     context = _trim_context(context)
     prompt = build_rag_prompt(question, context, conversation)
 
-    max_attempts = min(len(candidate_models), 3)
+    max_attempts = len(candidate_models)
     last_exc = None
     attempted = 0
     for model in candidate_models:
@@ -232,6 +228,7 @@ def generate_answer(question: str, context: str, conversation: str | None = None
                 if attempted >= max_attempts:
                     logger.warning("Gemini model exhausted after %d attempts, returning last error.", attempted)
                     return _format_and_log_error(last_exc, context_msg="generate_answer")
+                time.sleep(1)
                 continue
             return _format_and_log_error(exc, context_msg="generate_answer")
 
@@ -248,15 +245,8 @@ def generate_answer_stream(question: str, context: str, conversation: str | None
         yield GEMINI_MISSING_KEY_ERROR
         return
 
-    primary_model = os.getenv("GEMINI_MODEL", GEMINI_MODEL).strip() or "gemini-3.6-flash"
-    candidate_models = list(dict.fromkeys([
-        primary_model,
-        "gemini-3.6-flash",
-        "gemini-flash-latest",
-        "gemini-3.5-flash-lite",
-        "gemini-2.5-flash-lite",
-        "gemini-3.7-flash",
-    ]))
+    primary_model = os.getenv("GEMINI_MODEL", GEMINI_MODEL).strip() or "gemini-2.5-flash"
+    candidate_models = [primary_model] * 2
 
     max_tokens = GEMINI_MAX_TOKENS
     temperature = GEMINI_TEMPERATURE
@@ -304,11 +294,10 @@ def generate_answer_stream(question: str, context: str, conversation: str | None
                 or "resource_exhausted" in err_str
                 or "quota" in err_str
             ):
+                time.sleep(1)
                 continue
             yield _format_and_log_error(exc, context_msg="generate_answer_stream")
             return
 
     if last_exc:
         yield _format_and_log_error(last_exc, context_msg="generate_answer_stream")
-
-

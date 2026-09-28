@@ -16,6 +16,7 @@ services:
       - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-gemini}
       - ENABLE_RERANKER=${ENABLE_RERANKER:-true}
       - RAG_DEBUG=${RAG_DEBUG:-false}
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173}
     volumes:
       - ./data/uploads:/app/data/uploads
       - ./data/logs:/app/data/logs

@@ -29,8 +29,6 @@ from backend.src.utils.errors import (
     http_exception_handler,
     validation_exception_handler,
 )
-from backend.src.retrieval.reranker import _load_cross_encoder
-
 from backend.src.api.routes import router as api_router
 
 app = FastAPI(
@@ -40,28 +38,13 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# Load Cross-Encoder reranker model at startup so it does NOT load mid-request.
-# This eliminates the ~68s latency spike caused by loading sentence_transformers
-# for the first time during a user chat request (HuggingFace unauthenticated
-# warning + weight download).
+# CORS: only explicitly configured application origins may call the API.
 # ---------------------------------------------------------------------------
-_load_cross_encoder()
-
-# ---------------------------------------------------------------------------
-# CORS: Allow configured origins, local development, and all Vercel domains.
-# ---------------------------------------------------------------------------
-allowed_origins = list(set(CORS_ORIGINS + [
-    "https://documind-rag-platform.vercel.app",
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:5173",
-    "http://127.0.0.1:3000",
-]))
+allowed_origins = list(dict.fromkeys(CORS_ORIGINS))
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
