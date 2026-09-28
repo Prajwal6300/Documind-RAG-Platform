@@ -51,46 +51,10 @@ export default function ChatWorkspace() {
   const handleSendFollowUp = async (e) => {
     e?.preventDefault();
     if (!followUpText.trim()) return;
-    setIsAiThinking(true);
     try {
-      const result = await api.sendChatMessageStream(followUpText);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: result.sessionId || Date.now().toString(),
-          sender: 'assistant',
-          intro: result.groundedness
-            ? (result.groundedness.confidence || 'Low')
-            : 'Low',
-          text: result.text,
-          sections: [],
-          sources: [],
-          evidences: [],
-          noContext: false,
-          groundedness: result.groundedness,
-          debug: {},
-          timestamp: new Date().toLocaleString(),
-        },
-      ]);
+      await sendChatMessage(followUpText, selectedScope);
     } catch (err) {
-      console.error('Stream error:', err);
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          sender: 'assistant',
-          text: 'Error: ' + (err.message || 'Unknown error'),
-          sections: [],
-          sources: [],
-          evidences: [],
-          noContext: true,
-          groundedness: { score: 0.0, confidence: 'Low', is_grounded: False },
-          debug: {},
-          timestamp: new Date().toLocaleString(),
-        },
-      ]);
-    } finally {
-      setIsAiThinking(false);
+      // The shared context already adds a user-visible error response and toast.
     }
     setFollowUpText('');
   };
@@ -250,7 +214,7 @@ export default function ChatWorkspace() {
                                      transition-colors cursor-pointer bg-surface/50"
                         >
                           <span className="material-symbols-outlined text-[16px]">description</span>
-                          <span>{src.name} · Page {src.page}</span>
+                          <span>{src.name}{src.page != null ? ` · Page ${src.page}` : ''}</span>
                         </button>
                       ))}
                     </div>
