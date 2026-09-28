@@ -138,13 +138,14 @@ def create_chunks(
     all_chunks = []
     current_section = None
 
+    chunk_index = 0
     for page_data in pages:
         text = page_data.get("text", "")
         page = page_data.get("page")
 
         chunks = chunk_text(text, chunk_size, overlap)
 
-        for index, chunk in enumerate(chunks):
+        for chunk in chunks:
             # Check for section headers in chunk
             detected = _detect_section(chunk)
             if detected:
@@ -155,11 +156,14 @@ def create_chunks(
                 "metadata": {
                     "source": source,
                     "page": page,
-                    "chunk_id": _chunk_id(document_id, source, page, index),
+                    "chunk_id": _chunk_id(document_id, source, page, chunk_index),
                     "document_id": document_id,
-                    "chunk_index": index,
+                    # This must be unique within a document. Resetting it for
+                    # every page made adjacent-context expansion mix pages.
+                    "chunk_index": chunk_index,
                     "section": current_section or "",
                 }
             })
+            chunk_index += 1
 
     return all_chunks
